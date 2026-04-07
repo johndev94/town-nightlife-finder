@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Town Nightlife Finder{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('nightlife.index') }}">
+        <span class="brand-mark">TN</span>
+        <span>
+          <strong>Town Nightlife Finder</strong>
+          <small>See what's on tonight</small>
+        </span>
+      </a>
+      <nav class="header-actions">
+        {% if current_user %}
+          <a href="{{ url_for('nightlife.dashboard') }}">Dashboard</a>
+          <form method="post" action="{{ url_for('nightlife.logout') }}">
+            <button type="submit" class="link-button">Logout</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('nightlife.login') }}">Admin / Owner Login</a>
+        {% endif %}
+      </nav>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+    <main>{% block content %}{% endblock %}</main>
+  </body>
+</html>

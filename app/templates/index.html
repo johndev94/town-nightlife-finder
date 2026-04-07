@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Town Nightlife Finder{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Night out planner</p>
+    <h1>Find pubs, bars, clubs, and events by area, genre, time, and price.</h1>
+    <p class="hero-text">Browse one town at a time, switch neighbourhoods on the map, and compare tonight's openings, event times, and ticket prices.</p>
+    <div class="hero-pills">
+      <span>List-first discovery</span>
+      <span>Map area selection</span>
+      <span>Venue claims & admin review</span>
+    </div>
+  </div>
+  <aside class="map-card">
+    <div class="map-card-header">
+      <h2>Town map</h2>
+      <p>Select an area to focus the listings.</p>
+    </div>
+    <div class="mini-map">
+      {% for area in areas %}
+        <a href="{{ url_for('nightlife.index', area=area['slug'], genre=filters['genre'], venue_type=filters['venue_type'], price_band=filters['price_band'], date=filters['date'], sort=filters['sort'], open_now='1' if filters['open_now'] else '') }}" class="map-zone {% if filters['area'] == area['slug'] or (not filters['area'] and featured_area and featured_area['slug'] == area['slug']) %}active{% endif %}">
+          <strong>{{ area["name"] }}</strong>
+          <span>{{ area["description"] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+
+<section class="panel filter-panel">
+  <form class="filters-grid" method="get">
+    <label>Area
+      <select name="area">
+        <option value="">All mapped areas</option>
+        {% for area in areas %}
+          <option value="{{ area['slug'] }}" {% if filters['area'] == area['slug'] %}selected{% endif %}>{{ area["name"] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Date<input type="date" name="date" value="{{ filters['date'] }}"></label>
+    <label>Genre
+      <select name="genre">
+        <option value="">Any genre</option>
+        {% for genre in options['genres'] %}
+          <option value="{{ genre['genre'] }}" {% if filters['genre'] == genre['genre'] %}selected{% endif %}>{{ genre["genre"] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Venue type
+      <select name="venue_type">
+        <option value="">Any venue</option>
+        {% for venue_type in options['venue_types'] %}
+          <option value="{{ venue_type['venue_type'] }}" {% if filters['venue_type'] == venue_type['venue_type'] %}selected{% endif %}>{{ venue_type["venue_type"] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Price band
+      <select name="price_band">
+        <option value="">Any budget</option>
+        {% for price_band in options['price_bands'] %}
+          <option value="{{ price_band['price_band'] }}" {% if filters['price_band'] == price_band['price_band'] %}selected{% endif %}>{{ price_band["price_band"] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Sort by
+      <select name="sort">
+        <option value="time" {% if filters['sort'] == 'time' %}selected{% endif %}>Next event / opening time</option>
+        <option value="name" {% if filters['sort'] == 'name' %}selected{% endif %}>Venue name</option>
+        <option value="price" {% if filters['sort'] == 'price' %}selected{% endif %}>Price</option>
+        <option value="area" {% if filters['sort'] == 'area' %}selected{% endif %}>Area</option>
+      </select>
+    </label>
+    <label class="checkbox"><input type="checkbox" name="open_now" {% if filters['open_now'] %}checked{% endif %}>Open now</label>
+    <div class="filter-actions">
+      <button type="submit">Apply filters</button>
+      <a href="{{ url_for('nightlife.index') }}">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel stats-bar">
+  <div><strong>{{ venues|length }}</strong><span>venues match your filters</span></div>
+  <div><strong>{{ events|length }}</strong><span>published events from {{ filters['date'] }}</span></div>
+  <div><strong>{{ featured_area['name'] if featured_area else 'All areas' }}</strong><span>current map focus</span></div>
+</section>
+
+<section class="content-grid">
+  <div class="list-column">
+    <div class="section-heading">
+      <h2>Places in the area</h2>
+      <p>Every card shows opening times, price band, freshness, and the next published event.</p>
+    </div>
+    <div class="venue-list">
+      {% for venue in venues %}
+        <article class="venue-card">
+          <div class="card-topline">
+            <span class="chip">{{ venue["venue_type"] }}</span>
+            <span class="chip chip-soft">{{ venue["area_name"] }}</span>
+            <span class="chip">{{ venue["price_band"] }}</span>
+          </div>
+          <h3><a href="{{ url_for('nightlife.venue_detail', slug=venue['slug']) }}">{{ venue["name"] }}</a></h3>
+          <p>{{ venue["description"] }}</p>
+          <dl class="meta-grid">
+            <div><dt>Opens</dt><dd>{{ venue["opens_at"] }} - {{ venue["closes_at"] }}</dd></div>
+            <div><dt>Address</dt><dd>{{ venue["address"] }}</dd></div>
+            <div><dt>Next event</dt><dd>{{ venue["next_event_start"]|datetimeformat if venue["next_event_start"] else "No upcoming published event" }}</dd></div>
+            <div><dt>Data status</dt><dd>{{ venue["sync_status"] }} · {{ (venue["confidence"] * 100)|round|int }}% confidence</dd></div>
+          </dl>
+          <div class="social-row">
+            {% if venue["social_website"] %}<a href="{{ venue['social_website'] }}">Website</a>{% endif %}
+            {% if venue["social_facebook"] %}<a href="{{ venue['social_facebook'] }}">Facebook</a>{% endif %}
+            {% if venue["social_instagram"] %}<a href="{{ venue['social_instagram'] }}">Instagram</a>{% endif %}
+          </div>
+        </article>
+      {% else %}
+        <p class="empty-state">No venues matched those filters. Try clearing the genre or open-now setting.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="list-column">
+    <div class="section-heading">
+      <h2>Upcoming events</h2>
+      <p>Chronological event feed for the selected area and filter set.</p>
+    </div>
+    <div class="event-list">
+      {% for event in events %}
+        <article class="event-card">
+          <div class="card-topline">
+            <span class="chip">{{ event["genre"] }}</span>
+            <span class="chip chip-soft">{{ event["venue_name"] }}</span>
+            <span class="chip">{{ event["price_label"] }}</span>
+          </div>
+          <h3>{{ event["title"] }}</h3>
+          <p>{{ event["description"] }}</p>
+          <dl class="meta-grid">
+            <div><dt>Event time</dt><dd>{{ event["start_at"]|datetimeformat }} to {{ event["end_at"]|datetimeformat("%H:%M") }}</dd></div>
+            <div><dt>Venue hours</dt><dd>{{ event["opens_at"] }} - {{ event["closes_at"] }}</dd></div>
+            <div><dt>Area</dt><dd>{{ event["area_name"] }}</dd></div>
+            <div><dt>Source freshness</dt><dd>{{ event["sync_status"] }} · {{ event["last_verified_at"]|datetimeformat("%d %b %Y %H:%M") }}</dd></div>
+          </dl>
+          <a class="inline-link" href="{{ url_for('nightlife.venue_detail', slug=event['venue_slug']) }}">Open venue page</a>
+        </article>
+      {% else %}
+        <p class="empty-state">No events were found for that date and filter set.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

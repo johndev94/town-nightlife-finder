@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Town Nightlife Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body class="app-shell-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+    <div id="app-root"></div>
+    <script>
+      window.__APP_CONFIG__ = {{ app_config|tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='vendor/react.development.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/react-dom.development.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/babel.min.js') }}"></script>
+    <script type="text/babel" data-presets="typescript,react" src="{{ url_for('static', filename='app.tsx') }}"></script>
+  </body>
+</html>

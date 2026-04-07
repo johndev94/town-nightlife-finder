@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ venue["name"] }} | Town Nightlife Finder{% endblock %}
+{% block content %}
+<section class="detail-hero">
+  <div>
+    <p class="eyebrow">{{ venue["venue_type"] }} · {{ venue["area_name"] }}</p>
+    <h1>{{ venue["name"] }}</h1>
+    <p class="hero-text">{{ venue["description"] }}</p>
+  </div>
+  <div class="detail-summary">
+    <div><strong>Hours</strong><span>{{ venue["opens_at"] }} - {{ venue["closes_at"] }}</span></div>
+    <div><strong>Budget</strong><span>{{ venue["price_band"] }}</span></div>
+    <div><strong>Status</strong><span>{{ venue["sync_status"] }}</span></div>
+    <div><strong>Verified</strong><span>{{ venue["last_verified_at"]|datetimeformat("%d %b %Y %H:%M") }}</span></div>
+  </div>
+</section>
+
+<section class="content-grid detail-grid">
+  <div class="list-column">
+    <section class="panel">
+      <h2>Venue details</h2>
+      <p>{{ venue["address"] }}</p>
+      <div class="social-row">
+        {% if venue["social_website"] %}<a href="{{ venue['social_website'] }}">Website</a>{% endif %}
+        {% if venue["social_facebook"] %}<a href="{{ venue['social_facebook'] }}">Facebook</a>{% endif %}
+        {% if venue["social_instagram"] %}<a href="{{ venue['social_instagram'] }}">Instagram</a>{% endif %}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Opening hours</h2>
+      <div class="hours-list">
+        {% for hour in opening_hours %}
+          <div class="hours-row">
+            <span>{{ ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][hour["day_of_week"]] }}</span>
+            <strong>{{ hour["open_time"] }} - {{ hour["close_time"] }}{% if hour["is_overnight"] %} (overnight){% endif %}</strong>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+  <div class="list-column">
+    <section class="panel">
+      <h2>Upcoming events</h2>
+      <div class="event-list">
+        {% for event in events %}
+          <article class="event-card compact">
+            <div class="card-topline">
+              <span class="chip">{{ event["genre"] }}</span>
+              <span class="chip">{{ event["price_label"] }}</span>
+            </div>
+            <h3>{{ event["title"] }}</h3>
+            <p>{{ event["description"] }}</p>
+            <p>{{ event["start_at"]|datetimeformat }} to {{ event["end_at"]|datetimeformat("%H:%M") }}</p>
+          </article>
+        {% else %}
+          <p class="empty-state">No published events are scheduled right now.</p>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Source references</h2>
+      <div class="sources-list">
+        {% for source in sources %}
+          <article class="source-item">
+            <strong>{{ source["platform"] }}</strong>
+            <span>{{ source["sync_status"] }} · {{ (source["confidence"] * 100)|round|int }}%</span>
+            {% if source["source_url"] %}<a href="{{ source['source_url'] }}">Open source</a>{% endif %}
+            <p>{{ source["notes"] }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Claim this venue</h2>
+      <form method="post" action="{{ url_for('nightlife.create_claim') }}" class="claim-form">
+        <input type="hidden" name="venue_id" value="{{ venue['id'] }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <label>Name<input type="text" name="claimant_name" required></label>
+        <label>Email<input type="email" name="claimant_email" required></label>
+        <label>Message<textarea name="message" rows="4" required></textarea></label>
+        <button type="submit">Submit claim request</button>
+      </form>
+    </section>
+  </div>
+</section>
+{% endblock %}

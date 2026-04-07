@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Town Nightlife Finder{% endblock %}
+{% block content %}
+<section class="detail-hero">
+  <div>
+    <p class="eyebrow">{{ user["role"]|title }} dashboard</p>
+    <h1>Manage freshness, listings, and claim requests.</h1>
+    <p class="hero-text">{% if user["role"] == "admin" %}Review the whole town catalog, update sync status, and approve or reject venue claims.{% else %}Keep your venue listings current without touching any other venue's records.{% endif %}</p>
+  </div>
+</section>
+
+<section class="content-grid detail-grid">
+  <div class="list-column">
+    <section class="panel">
+      <h2>Your venues</h2>
+      {% for venue in venues %}
+        <form method="post" action="{{ url_for('nightlife.update_venue', venue_id=venue['id']) }}" class="dashboard-form">
+          <h3>{{ venue["name"] }} <span class="muted">· {{ venue["area_name"] }}</span></h3>
+          <div class="form-grid">
+            <label>Opens<input type="time" name="opens_at" value="{{ venue['opens_at'] }}" required></label>
+            <label>Closes<input type="time" name="closes_at" value="{{ venue['closes_at'] }}" required></label>
+            <label>Price band<input type="text" name="price_band" value="{{ venue['price_band'] }}" required></label>
+            <label>Source type<input type="text" name="source_type" value="{{ venue['source_type'] }}" required></label>
+            <label>Source URL<input type="url" name="source_url" value="{{ venue['source_url'] or '' }}"></label>
+            <label>Status<input type="text" name="sync_status" value="{{ venue['sync_status'] }}" required></label>
+            <label>Confidence<input type="number" step="0.01" min="0" max="1" name="confidence" value="{{ venue['confidence'] }}" required></label>
+          </div>
+          <button type="submit">Save venue</button>
+        </form>
+      {% else %}
+        <p class="empty-state">No venues are assigned to this account yet.</p>
+      {% endfor %}
+    </section>
+  </div>
+
+  <div class="list-column">
+    <section class="panel">
+      <h2>Upcoming events</h2>
+      {% for event in events %}
+        <form method="post" action="{{ url_for('nightlife.update_event', event_id=event['id']) }}" class="dashboard-form">
+          <h3>{{ event["title"] }} <span class="muted">· {{ event["venue_name"] }}</span></h3>
+          <div class="form-grid">
+            <label>Title<input type="text" name="title" value="{{ event['title'] }}" required></label>
+            <label>Genre<input type="text" name="genre" value="{{ event['genre'] }}" required></label>
+            <label>Starts<input type="datetime-local" name="start_at" value="{{ event['start_at'] }}" required></label>
+            <label>Ends<input type="datetime-local" name="end_at" value="{{ event['end_at'] }}" required></label>
+            <label>Price label<input type="text" name="price_label" value="{{ event['price_label'] }}" required></label>
+            <label>Price amount<input type="number" step="0.01" name="price_amount" value="{{ event['price_amount'] if event['price_amount'] is not none else '' }}"></label>
+            <label>Source type<input type="text" name="source_type" value="{{ event['source_type'] }}" required></label>
+            <label>Source URL<input type="url" name="source_url" value="{{ event['source_url'] or '' }}"></label>
+            <label>Status<input type="text" name="sync_status" value="{{ event['sync_status'] }}" required></label>
+            <label class="checkbox"><input type="checkbox" name="is_published" {% if event['is_published'] %}checked{% endif %}>Published</label>
+          </div>
+          <button type="submit">Save event</button>
+        </form>
+      {% else %}
+        <p class="empty-state">No events are available to manage.</p>
+      {% endfor %}
+    </section>
+
+    {% if user["role"] == "admin" %}
+      <section class="panel">
+        <h2>Venue claims</h2>
+        {% for claim in claims %}
+          <form method="post" action="{{ url_for('nightlife.review_claim', claim_id=claim['id']) }}" class="claim-review">
+            <div>
+              <strong>{{ claim["venue_name"] }}</strong>
+              <p>{{ claim["claimant_name"] }} · {{ claim["claimant_email"] }}</p>
+              <p>{{ claim["message"] }}</p>
+              <small>{{ claim["created_at"]|datetimeformat("%d %b %Y %H:%M") }}</small>
+            </div>
+            <div class="inline-actions">
+              <button type="submit" name="status" value="approved">Approve</button>
+              <button type="submit" name="status" value="rejected" class="secondary">Reject</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="empty-state">No claim requests are waiting for review.</p>
+        {% endfor %}
+      </section>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

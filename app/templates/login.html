@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Login | Town Nightlife Finder{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="panel auth-card">
+    <p class="eyebrow">Protected workspace</p>
+    <h1>Admin and venue owner login</h1>
+    <p>Demo accounts: <code>admin / adminpass</code> and <code>velvet_owner / ownerpass</code>.</p>
+    <form method="post" class="auth-form">
+      <label>Username<input type="text" name="username" required></label>
+      <label>Password<input type="password" name="password" required></label>
+      <button type="submit">Sign in</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
