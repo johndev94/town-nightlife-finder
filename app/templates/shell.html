@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Town Nightlife Finder</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260408b') }}">
   </head>
   <body class="app-shell-body">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -19,10 +19,11 @@
     <div id="app-root"></div>
     <script>
       window.__APP_CONFIG__ = {{ app_config|tojson }};
+      window.__INITIAL_DATA__ = {{ (initial_data or {})|tojson }};
     </script>
-    <script src="{{ url_for('static', filename='vendor/react.development.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/react-dom.development.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/babel.min.js') }}"></script>
-    <script type="text/babel" data-presets="typescript,react" src="{{ url_for('static', filename='app.tsx') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/react.development.js', v='20260408b') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/react-dom.development.js', v='20260408b') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/babel.min.js', v='20260408b') }}"></script>
+    <script type="text/babel" data-presets="typescript,react" src="{{ url_for('static', filename='app.tsx', v='20260408b') }}"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from functools import wraps
 
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
@@ -38,7 +38,7 @@ def normalize_filters(args):
         "genre": args.get("genre", "").strip(),
         "venue_type": args.get("venue_type", "").strip(),
         "price_band": args.get("price_band", "").strip(),
-        "date": args.get("date", "").strip() or date.today().isoformat(),
+        "date": args.get("date", "").strip(),
         "sort": args.get("sort", "time").strip(),
         "open_now": args.get("open_now", "").lower() in {"1", "true", "on", "yes"},
         "bounds_north": args.get("bounds_north", "").strip(),
@@ -111,24 +111,29 @@ def fetch_venues(filters):
         "area": "a.name ASC, v.name ASC",
         "time": "v.opens_at ASC, v.name ASC",
     }.get(filters["sort"], "v.opens_at ASC, v.name ASC")
+    event_date_clause = "AND date(e.start_at) >= date(?)" if filters["date"] else ""
+    event_date_params = [filters["date"]] if filters["date"] else []
     return get_db().execute(
         f"""
         SELECT v.*, a.name AS area_name, a.slug AS area_slug, COUNT(e.id) AS upcoming_event_count, MIN(e.start_at) AS next_event_start
         FROM venues v
         JOIN areas a ON a.id = v.area_id
-        LEFT JOIN events e ON e.venue_id = v.id AND e.is_published = 1 AND date(e.start_at) >= date(?) AND (? = '' OR LOWER(e.genre) = LOWER(?))
+        LEFT JOIN events e ON e.venue_id = v.id AND e.is_published = 1 {event_date_clause} AND (? = '' OR LOWER(e.genre) = LOWER(?))
         WHERE {where_clause}
         GROUP BY v.id
         ORDER BY {order_by}
         """,
-        [filters["date"], filters["genre"], filters["genre"], *params],
+        [*event_date_params, filters["genre"], filters["genre"], *params],
     ).fetchall()
 
 
 def fetch_events(filters):
     where_clause, params = build_venue_filters(filters)
-    event_clauses = ["e.is_published = 1", "date(e.start_at) >= date(?)"]
-    event_params = [filters["date"]]
+    event_clauses = ["e.is_published = 1"]
+    event_params = []
+    if filters["date"]:
+        event_clauses.append("date(e.start_at) >= date(?)")
+        event_params.append(filters["date"])
     if filters["genre"]:
         event_clauses.append("LOWER(e.genre) = LOWER(?)")
         event_params.append(filters["genre"])
@@ -200,7 +205,31 @@ def inject_user():
 
 @bp.get("/")
 def index():
-    return render_template("shell.html", app_config={"page": "home", "venueSlug": None})
+    filters = normalize_filters(request.args)
+    return render_template(
+        "shell.html",
+        app_config={"page": "home", "venueSlug": None},
+        initial_data={
+            "areas": [
+                {
+                    "id": area["id"],
+                    "name": area["name"],
+                    "slug": area["slug"],
+                    "description": area["description"],
+                    "center": {"lat": area["center_lat"], "lng": area["center_lng"]},
+                    "bounds": {
+                        "north": area["bounds_north"],
+                        "south": area["bounds_south"],
+                        "east": area["bounds_east"],
+                        "west": area["bounds_west"],
+                    },
+                }
+                for area in fetch_areas()
+            ],
+            "venues": [format_venue(row) for row in fetch_venues(filters)],
+            "events": [format_event(row) for row in fetch_events(filters)],
+        },
+    )
 
 
 @bp.get("/venues/<slug>")
@@ -209,7 +238,7 @@ def venue_detail(slug):
     venue = db.execute("SELECT v.*, a.name AS area_name, a.slug AS area_slug FROM venues v JOIN areas a ON a.id = v.area_id WHERE v.slug = ? AND v.is_published = 1", (slug,)).fetchone()
     if venue is None:
         abort(404)
-    return render_template("shell.html", app_config={"page": "venue", "venueSlug": slug})
+    return render_template("shell.html", app_config={"page": "venue", "venueSlug": slug}, initial_data={})
 
 
 @bp.get("/events/<int:event_id>")
@@ -225,7 +254,7 @@ def event_detail(event_id):
     ).fetchone()
     if event is None:
         abort(404)
-    return render_template("shell.html", app_config={"page": "event", "venueSlug": None, "eventId": event_id})
+    return render_template("shell.html", app_config={"page": "event", "venueSlug": None, "eventId": event_id}, initial_data={})
 
 
 @bp.get("/api/areas")
