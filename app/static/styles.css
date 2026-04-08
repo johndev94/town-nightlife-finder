@@ -63,7 +63,10 @@ a { color: inherit; }
   isolation: isolate;
 }
 
-.nightlife-app > *:not(.app-background-art) {
+.nightlife-app > section,
+.nightlife-app > header,
+.nightlife-app > a,
+.nightlife-app > p {
   position: relative;
   z-index: 1;
 }
@@ -1029,16 +1032,14 @@ body[data-theme="light"] .toggle-pill span {
 .venue-tile,
 .event-tile,
 .spotlight-card,
-.claim-surface,
-.side-panel {
+.claim-surface {
   position: relative;
 }
 
 .hero-copy-rich::before,
 .district-panel::before,
 .filter-surface::before,
-.claim-surface::before,
-.side-panel::before {
+.claim-surface::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1049,6 +1050,15 @@ body[data-theme="light"] .toggle-pill span {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+.side-panel {
+  position: fixed;
+}
+
+.side-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .spotlight-banner {
