@@ -19,6 +19,22 @@ const DEFAULT_TOWN = {
   coords: { lat: 54.1159, lng: -9.1536 },
 }
 
+const EVENT_MARKER_SVG = `
+  <svg class="event-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="eventPinGlow" x1="10%" x2="90%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#ff7a29" />
+        <stop offset="54%" stop-color="#f4c95d" />
+        <stop offset="100%" stop-color="#32c3ff" />
+      </linearGradient>
+    </defs>
+    <path class="event-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
+    <path class="event-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
+    <circle class="event-pin-inner" cx="32" cy="29" r="15" />
+    <path class="event-pin-note" d="M37 18v20.5a5.5 5.5 0 1 1-3-4.9V23l-12 3v14.5a5.5 5.5 0 1 1-3-4.9V23.7L37 18Z" />
+  </svg>
+`
+
 function useCurrentLocation() {
   const [coords, setCoords] = useState<Coords | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -318,10 +334,39 @@ function MapPanel({
     const eventIcon = (active: boolean) =>
       L.divIcon({
         className: classNames('leaflet-night-marker', 'event-leaflet-marker', active && 'active'),
-        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
+        html: `<span class="marker-glow"></span>${EVENT_MARKER_SVG}`,
+        iconSize: [48, 58],
+        iconAnchor: [24, 54],
       })
+
+    const eventPopup = (item: EventWithDistance) => {
+      const popup = document.createElement('div')
+      popup.className = 'event-map-popup'
+
+      const kicker = document.createElement('p')
+      kicker.className = 'event-map-popup-kicker'
+      kicker.textContent = `${item.genre} | ${item.price_label}`
+
+      const title = document.createElement('strong')
+      title.textContent = item.title
+
+      const meta = document.createElement('span')
+      meta.textContent = `${item.venue.name} | ${formatDateTime(item.start_at, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+
+      const directions = document.createElement('a')
+      directions.href = mapsUrl(item.venue.coordinates)
+      directions.target = '_blank'
+      directions.rel = 'noreferrer'
+      directions.textContent = 'Get directions'
+
+      popup.append(kicker, title, meta, directions)
+      return popup
+    }
 
     venues.forEach((venue) => {
       L.marker([venue.coordinates.lat, venue.coordinates.lng], {
@@ -334,13 +379,27 @@ function MapPanel({
 
     events.forEach((item, index) => {
       const offset = (index % 5) * 0.000035
-      L.marker([item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset], {
+      const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
+      const marker = L.marker(eventPosition, {
         icon: eventIcon(selectedEventId === item.id),
         title: item.title,
         zIndexOffset: 500 + index,
       })
-        .on('click', () => onSelectEvent(item))
+        .bindPopup(eventPopup(item), {
+          className: 'nightlife-leaflet-popup',
+          closeButton: true,
+          maxWidth: 260,
+        })
+        .on('click', () => {
+          map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+          onSelectEvent(item)
+        })
         .addTo(layer)
+
+      if (selectedEventId === item.id) {
+        map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+        marker.openPopup()
+      }
     })
 
     if (userCoords) {
