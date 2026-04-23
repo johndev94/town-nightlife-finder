@@ -1,8 +1,23 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 import { initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
 import type { Area, Coords, EventWithDistance, Filters, Theme, VenueWithDistance } from './types'
+
+type TownSearchResult = {
+  place_id: number
+  display_name: string
+  lat: string
+  lon: string
+  boundingbox?: string[]
+}
+
+const DEFAULT_TOWN = {
+  label: 'Ballina, Co. Mayo',
+  coords: { lat: 54.1159, lng: -9.1536 },
+}
 
 function useCurrentLocation() {
   const [coords, setCoords] = useState<Coords | null>(null)
@@ -233,6 +248,7 @@ function MapPanel({
   selectedArea,
   selectedEventId,
   selectedVenueId,
+  userCoords,
   onSelectArea,
   onSelectEvent,
   onSelectVenue,
@@ -243,135 +259,209 @@ function MapPanel({
   selectedArea: string
   selectedEventId: number | null
   selectedVenueId: number | null
+  userCoords: Coords | null
   onSelectArea: (slug: string) => void
   onSelectEvent: (event: EventWithDistance) => void
   onSelectVenue: (venue: VenueWithDistance) => void
 }) {
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [dragging, setDragging] = useState(false)
-  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | null>(null)
+  const mapElementRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const markerLayerRef = useRef<L.LayerGroup | null>(null)
+  const hasFittedInitialMarkers = useRef(false)
+  const [townQuery, setTownQuery] = useState('')
+  const [townResults, setTownResults] = useState<TownSearchResult[]>([])
+  const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
+  const [townSearchStatus, setTownSearchStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle')
 
-  if (!areas.length) return null
+  useEffect(() => {
+    if (!mapElementRef.current || mapRef.current) return
 
-  const north = Math.max(...areas.map((area) => area.bounds.north))
-  const south = Math.min(...areas.map((area) => area.bounds.south))
-  const east = Math.max(...areas.map((area) => area.bounds.east))
-  const west = Math.min(...areas.map((area) => area.bounds.west))
-
-  function startDrag(clientX: number, clientY: number) {
-    dragRef.current = { x: clientX, y: clientY, panX: pan.x, panY: pan.y, moved: false }
-    setDragging(false)
-  }
-
-  function updateDrag(clientX: number, clientY: number) {
-    if (!dragRef.current) return
-    const deltaX = clientX - dragRef.current.x
-    const deltaY = clientY - dragRef.current.y
-    const moved = Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6
-    if (!moved && !dragRef.current.moved) return
-    dragRef.current.moved = true
-    setDragging(true)
-    setPan({
-      x: Math.max(-140, Math.min(140, dragRef.current.panX + deltaX)),
-      y: Math.max(-110, Math.min(110, dragRef.current.panY + deltaY)),
+    const map = L.map(mapElementRef.current, {
+      center: [DEFAULT_TOWN.coords.lat, DEFAULT_TOWN.coords.lng],
+      zoom: 16,
+      zoomControl: true,
+      scrollWheelZoom: true,
     })
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map)
+
+    markerLayerRef.current = L.layerGroup().addTo(map)
+    mapRef.current = map
+
+    window.setTimeout(() => map.invalidateSize(), 80)
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+      markerLayerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const layer = markerLayerRef.current
+    if (!map || !layer) return
+
+    layer.clearLayers()
+
+    const venueIcon = (active: boolean) =>
+      L.divIcon({
+        className: classNames('leaflet-night-marker', 'venue-leaflet-marker', active && 'active'),
+        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      })
+
+    const eventIcon = (active: boolean) =>
+      L.divIcon({
+        className: classNames('leaflet-night-marker', 'event-leaflet-marker', active && 'active'),
+        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+      })
+
+    venues.forEach((venue) => {
+      L.marker([venue.coordinates.lat, venue.coordinates.lng], {
+        icon: venueIcon(selectedVenueId === venue.id),
+        title: venue.name,
+      })
+        .on('click', () => onSelectVenue(venue))
+        .addTo(layer)
+    })
+
+    events.forEach((item, index) => {
+      const offset = (index % 5) * 0.000035
+      L.marker([item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset], {
+        icon: eventIcon(selectedEventId === item.id),
+        title: item.title,
+        zIndexOffset: 500 + index,
+      })
+        .on('click', () => onSelectEvent(item))
+        .addTo(layer)
+    })
+
+    if (userCoords) {
+      L.marker([userCoords.lat, userCoords.lng], {
+        icon: L.divIcon({
+          className: 'user-avatar-marker',
+          html: '<span class="avatar-pulse"></span><span class="avatar-face"><span></span></span>',
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        }),
+        title: 'You are here',
+        zIndexOffset: 1200,
+      }).addTo(layer)
+    }
+
+    if (!hasFittedInitialMarkers.current && venues.length > 0) {
+      const bounds = L.latLngBounds(venues.map((venue) => [venue.coordinates.lat, venue.coordinates.lng]))
+      map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
+      hasFittedInitialMarkers.current = true
+    }
+  }, [events, onSelectEvent, onSelectVenue, selectedEventId, selectedVenueId, userCoords, venues])
+
+  useEffect(() => {
+    const area = areas.find((item) => item.slug === selectedArea)
+    if (!area || !mapRef.current) return
+    mapRef.current.setView([area.center.lat, area.center.lng], 16, { animate: true })
+    setSelectedTown(area.name)
+  }, [areas, selectedArea])
+
+  async function searchIrelandTown(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const query = townQuery.trim()
+    if (!query) return
+
+    setTownSearchStatus('loading')
+    setTownResults([])
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=ie&limit=8&addressdetails=1&q=${encodeURIComponent(
+          query,
+        )}`,
+      )
+      if (!response.ok) throw new Error('Town search failed')
+      const results = (await response.json()) as TownSearchResult[]
+      setTownResults(results)
+      setTownSearchStatus(results.length ? 'idle' : 'empty')
+    } catch {
+      setTownSearchStatus('error')
+    }
   }
 
-  function consumeDragClick() {
-    if (!dragRef.current?.moved) return false
-    dragRef.current = null
-    setDragging(false)
-    return true
-  }
+  function chooseTown(result: TownSearchResult) {
+    const lat = Number(result.lat)
+    const lng = Number(result.lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
 
-  function endDrag() {
-    dragRef.current = null
-    setDragging(false)
+    mapRef.current?.setView([lat, lng], 16, { animate: true })
+    setSelectedTown(result.display_name.split(',').slice(0, 3).join(', '))
+    setTownResults([])
+    setTownQuery('')
   }
 
   return (
     <div className="hero-panel district-panel">
       <div className="section-topline">
-        <span>Town map</span>
-        <small>Drag to explore and tap an event pulse for live info</small>
+        <span>Live town map</span>
+        <small>Zoom to building level, switch Irish towns, and tap markers for the side panel</small>
       </div>
-      <div
-        className={classNames('map-board', dragging && 'dragging')}
-        onMouseDown={(event) => startDrag(event.clientX, event.clientY)}
-        onMouseMove={(event) => updateDrag(event.clientX, event.clientY)}
-        onMouseUp={endDrag}
-        onMouseLeave={endDrag}
-        onTouchStart={(event) => {
-          const touch = event.touches[0]
-          if (touch) startDrag(touch.clientX, touch.clientY)
-        }}
-        onTouchMove={(event) => {
-          const touch = event.touches[0]
-          if (touch) updateDrag(touch.clientX, touch.clientY)
-        }}
-        onTouchEnd={endDrag}
-      >
-        <div className="map-canvas" style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}>
-          {areas.map((area, index) => {
-            const left = ((area.center.lng - west) / (east - west)) * 100
-            const top = 100 - ((area.center.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={area.id}
-                className={classNames(
-                  'map-area-chip',
-                  selectedArea === area.slug && 'active',
-                  `district-tone-${(index % 3) + 1}`,
-                )}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={() => {
-                  if (consumeDragClick()) return
-                  onSelectArea(selectedArea === area.slug ? '' : area.slug)
-                }}
-              >
-                {area.name}
-              </button>
-            )
-          })}
-          {venues.map((venue) => {
-            const left = ((venue.coordinates.lng - west) / (east - west)) * 100
-            const top = 100 - ((venue.coordinates.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={venue.id}
-                type="button"
-                className={classNames('map-pin', 'map-pin-button', selectedVenueId === venue.id && 'active')}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (consumeDragClick()) return
-                  onSelectVenue(venue)
-                }}
-              >
-                <span>{venue.name}</span>
-              </button>
-            )
-          })}
-          {events.map((item) => {
-            const left = ((item.venue.coordinates.lng - west) / (east - west)) * 100
-            const top = 100 - ((item.venue.coordinates.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={classNames('event-pin', selectedEventId === item.id && 'active')}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (consumeDragClick()) return
-                  onSelectEvent(item)
-                }}
-              >
-                <span>{item.title}</span>
-              </button>
-            )
-          })}
+
+      <div className="map-toolbar">
+        <div>
+          <span className="map-eyebrow">Viewing</span>
+          <strong>{selectedTown}</strong>
         </div>
+        <form className="map-search" onSubmit={searchIrelandTown}>
+          <input
+            type="search"
+            value={townQuery}
+            onChange={(event) => setTownQuery(event.target.value)}
+            placeholder="Search any town in Ireland"
+            aria-label="Search any town in Ireland"
+          />
+          <button type="submit">{townSearchStatus === 'loading' ? 'Searching...' : 'Go'}</button>
+        </form>
+      </div>
+
+      {townResults.length ? (
+        <div className="map-search-results">
+          {townResults.map((result) => (
+            <button key={result.place_id} type="button" onClick={() => chooseTown(result)}>
+              {result.display_name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {townSearchStatus === 'empty' ? <p className="map-search-note">No Irish town matches found. Try a nearby place name.</p> : null}
+      {townSearchStatus === 'error' ? <p className="map-search-note">Town search is unavailable right now. The map still works normally.</p> : null}
+
+      {areas.length ? (
+        <div className="map-area-strip">
+          {areas.map((area, index) => (
+            <button
+              key={area.id}
+              className={classNames(
+                'map-area-pill',
+                selectedArea === area.slug && 'active',
+                `district-tone-${(index % 3) + 1}`,
+              )}
+              type="button"
+              onClick={() => onSelectArea(selectedArea === area.slug ? '' : area.slug)}
+            >
+              {area.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="map-board real-map-board">
+        <div ref={mapElementRef} className="leaflet-map" aria-label="Interactive town nightlife map" />
       </div>
     </div>
   )
@@ -484,6 +574,7 @@ function HomePage() {
           selectedArea={filters.area}
           selectedEventId={selectedEvent?.id ?? null}
           selectedVenueId={selectedVenue?.id ?? null}
+          userCoords={location.coords}
           onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
           onSelectEvent={(event) => {
             setSelectedEvent(event)
