@@ -266,8 +266,6 @@ function MapPanel({
   selectedVenueId,
   userCoords,
   onSelectArea,
-  onSelectEvent,
-  onSelectVenue,
 }: {
   areas: Area[]
   venues: VenueWithDistance[]
@@ -277,12 +275,11 @@ function MapPanel({
   selectedVenueId: number | null
   userCoords: Coords | null
   onSelectArea: (slug: string) => void
-  onSelectEvent: (event: EventWithDistance) => void
-  onSelectVenue: (venue: VenueWithDistance) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markerLayerRef = useRef<L.LayerGroup | null>(null)
+  const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const hasFittedInitialMarkers = useRef(false)
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
@@ -304,6 +301,7 @@ function MapPanel({
       maxZoom: 19,
     }).addTo(map)
 
+    routeLayerRef.current = L.layerGroup().addTo(map)
     markerLayerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
@@ -313,6 +311,7 @@ function MapPanel({
       map.remove()
       mapRef.current = null
       markerLayerRef.current = null
+      routeLayerRef.current = null
     }
   }, [])
 
@@ -322,6 +321,10 @@ function MapPanel({
     if (!map || !layer) return
 
     layer.clearLayers()
+
+    if (!userCoords) {
+      routeLayerRef.current?.clearLayers()
+    }
 
     const venueIcon = (active: boolean) =>
       L.divIcon({
@@ -338,6 +341,67 @@ function MapPanel({
         iconSize: [48, 58],
         iconAnchor: [24, 54],
       })
+
+    const venuePopup = (venue: VenueWithDistance) => {
+      const popup = document.createElement('div')
+      popup.className = 'event-map-popup venue-map-popup'
+
+      const kicker = document.createElement('p')
+      kicker.className = 'event-map-popup-kicker'
+      kicker.textContent = `${venue.type} | ${venue.price_band}`
+
+      const title = document.createElement('strong')
+      title.textContent = venue.name
+
+      const meta = document.createElement('span')
+      meta.textContent = `${venue.address} | ${venue.opens_at} - ${venue.closes_at}`
+
+      const directions = document.createElement('a')
+      directions.href = mapsUrl(venue.coordinates)
+      directions.target = '_blank'
+      directions.rel = 'noreferrer'
+      directions.textContent = 'Open in maps'
+
+      popup.append(kicker, title, meta, directions)
+      return popup
+    }
+
+    const drawSimpleRoute = (item: EventWithDistance) => {
+      if (!userCoords || !routeLayerRef.current) return
+
+      const start = L.latLng(userCoords.lat, userCoords.lng)
+      const destination = L.latLng(item.venue.coordinates.lat, item.venue.coordinates.lng)
+
+      routeLayerRef.current.clearLayers()
+      L.polyline([start, destination], {
+        className: 'simple-route-line',
+        color: '#32c3ff',
+        weight: 5,
+        opacity: 0.92,
+        dashArray: '10 12',
+        lineCap: 'round',
+      }).addTo(routeLayerRef.current)
+
+      L.circleMarker(start, {
+        className: 'simple-route-start',
+        radius: 8,
+        color: '#fff9ef',
+        fillColor: '#32c3ff',
+        fillOpacity: 1,
+        weight: 3,
+      }).addTo(routeLayerRef.current)
+
+      L.circleMarker(destination, {
+        className: 'simple-route-finish',
+        radius: 9,
+        color: '#fff9ef',
+        fillColor: '#ff7a29',
+        fillOpacity: 1,
+        weight: 3,
+      }).addTo(routeLayerRef.current)
+
+      map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+    }
 
     const eventPopup = (item: EventWithDistance) => {
       const popup = document.createElement('div')
@@ -362,18 +426,46 @@ function MapPanel({
       directions.href = mapsUrl(item.venue.coordinates)
       directions.target = '_blank'
       directions.rel = 'noreferrer'
-      directions.textContent = 'Get directions'
+      directions.textContent = 'Open in maps'
 
-      popup.append(kicker, title, meta, directions)
+      const inAppRoute = document.createElement('button')
+      inAppRoute.type = 'button'
+      inAppRoute.className = 'event-map-popup-route'
+      inAppRoute.textContent = userCoords ? 'Show route on map' : 'Use location first'
+      inAppRoute.disabled = !userCoords
+      inAppRoute.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        drawSimpleRoute(item)
+      })
+
+      if (userCoords) {
+        const routeHint = document.createElement('small')
+        const miles = distanceMiles(userCoords, item.venue.coordinates)
+        const walkingMinutes = Math.max(1, Math.round(miles * 20))
+        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
+        return popup
+      }
+
+      popup.append(kicker, title, meta, inAppRoute, directions)
       return popup
     }
 
     venues.forEach((venue) => {
-      L.marker([venue.coordinates.lat, venue.coordinates.lng], {
+      const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
+      L.marker(venuePosition, {
         icon: venueIcon(selectedVenueId === venue.id),
         title: venue.name,
       })
-        .on('click', () => onSelectVenue(venue))
+        .bindPopup(venuePopup(venue), {
+          className: 'nightlife-leaflet-popup',
+          closeButton: true,
+          maxWidth: 260,
+        })
+        .on('click', () => {
+          map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
+        })
         .addTo(layer)
     })
 
@@ -392,7 +484,6 @@ function MapPanel({
         })
         .on('click', () => {
           map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
-          onSelectEvent(item)
         })
         .addTo(layer)
 
@@ -420,7 +511,7 @@ function MapPanel({
       map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
       hasFittedInitialMarkers.current = true
     }
-  }, [events, onSelectEvent, onSelectVenue, selectedEventId, selectedVenueId, userCoords, venues])
+  }, [events, selectedEventId, selectedVenueId, userCoords, venues])
 
   useEffect(() => {
     const area = areas.find((item) => item.slug === selectedArea)
@@ -635,14 +726,6 @@ function HomePage() {
           selectedVenueId={selectedVenue?.id ?? null}
           userCoords={location.coords}
           onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
-          onSelectEvent={(event) => {
-            setSelectedEvent(event)
-            setSelectedVenue(null)
-          }}
-          onSelectVenue={(venue) => {
-            setSelectedVenue(venue)
-            setSelectedEvent(null)
-          }}
         />
       </section>
       <section className="filter-surface">

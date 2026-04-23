@@ -1496,7 +1496,13 @@ body[data-theme="light"] .nightlife-leaflet-popup .leaflet-popup-tip {
   line-height: 1.45;
 }
 
-.event-map-popup a {
+.event-map-popup small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.event-map-popup a,
+.event-map-popup-route {
   display: inline-flex;
   justify-content: center;
   margin-top: 4px;
@@ -1506,6 +1512,29 @@ body[data-theme="light"] .nightlife-leaflet-popup .leaflet-popup-tip {
   color: #08111f;
   font-weight: 900;
   text-decoration: none;
+}
+
+.event-map-popup-route {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.event-map-popup-route:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--muted);
+}
+
+.event-map-popup a {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent-2);
+}
+
+.simple-route-line {
+  filter: drop-shadow(0 0 8px rgba(50, 195, 255, 0.52));
+  animation: routeDash 1.8s linear infinite;
 }
 
 .user-avatar-marker {
@@ -1592,6 +1621,11 @@ body[data-theme="light"] .nightlife-leaflet-popup .leaflet-popup-tip {
 @keyframes userPulse {
   0%, 100% { transform: scale(0.9); opacity: 0.55; }
   50% { transform: scale(1.22); opacity: 0.12; }
+}
+
+@keyframes routeDash {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -44; }
 }
 
 @keyframes mapGlowShift {
