@@ -1,8 +1,39 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 import { initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
 import type { Area, Coords, EventWithDistance, Filters, Theme, VenueWithDistance } from './types'
+
+type TownSearchResult = {
+  place_id: number
+  display_name: string
+  lat: string
+  lon: string
+  boundingbox?: string[]
+}
+
+const DEFAULT_TOWN = {
+  label: 'Ballina, Co. Mayo',
+  coords: { lat: 54.1159, lng: -9.1536 },
+}
+
+const EVENT_MARKER_SVG = `
+  <svg class="event-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="eventPinGlow" x1="10%" x2="90%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#ff7a29" />
+        <stop offset="54%" stop-color="#f4c95d" />
+        <stop offset="100%" stop-color="#32c3ff" />
+      </linearGradient>
+    </defs>
+    <path class="event-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
+    <path class="event-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
+    <circle class="event-pin-inner" cx="32" cy="29" r="15" />
+    <path class="event-pin-note" d="M37 18v20.5a5.5 5.5 0 1 1-3-4.9V23l-12 3v14.5a5.5 5.5 0 1 1-3-4.9V23.7L37 18Z" />
+  </svg>
+`
 
 function useCurrentLocation() {
   const [coords, setCoords] = useState<Coords | null>(null)
@@ -110,11 +141,15 @@ function AppBackground() {
 function SidePanel({
   selectedEvent,
   selectedVenue,
+  hasLocation,
   onClose,
+  onShowEventRoute,
 }: {
   selectedEvent: EventWithDistance | null
   selectedVenue: VenueWithDistance | null
+  hasLocation: boolean
   onClose: () => void
+  onShowEventRoute: (event: EventWithDistance) => void
 }) {
   if (!selectedEvent && !selectedVenue) return null
 
@@ -207,6 +242,11 @@ function SidePanel({
         </div>
         {destination ? (
           <div className="action-row side-actions">
+            {selectedEvent ? (
+              <button className="inline-route side-route-button" type="button" onClick={() => onShowEventRoute(selectedEvent)}>
+                {hasLocation ? 'Show route in app' : 'Use location for route'}
+              </button>
+            ) : null}
             <a className="inline-route" href={mapsUrl(destination)} target="_blank" rel="noreferrer">
               Directions
             </a>
@@ -233,9 +273,9 @@ function MapPanel({
   selectedArea,
   selectedEventId,
   selectedVenueId,
+  userCoords,
+  routeTarget,
   onSelectArea,
-  onSelectEvent,
-  onSelectVenue,
 }: {
   areas: Area[]
   venues: VenueWithDistance[]
@@ -243,135 +283,387 @@ function MapPanel({
   selectedArea: string
   selectedEventId: number | null
   selectedVenueId: number | null
+  userCoords: Coords | null
+  routeTarget: EventWithDistance | null
   onSelectArea: (slug: string) => void
-  onSelectEvent: (event: EventWithDistance) => void
-  onSelectVenue: (venue: VenueWithDistance) => void
 }) {
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [dragging, setDragging] = useState(false)
-  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | null>(null)
+  const mapElementRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const markerLayerRef = useRef<L.LayerGroup | null>(null)
+  const routeLayerRef = useRef<L.LayerGroup | null>(null)
+  const hasFittedInitialMarkers = useRef(false)
+  const [townQuery, setTownQuery] = useState('')
+  const [townResults, setTownResults] = useState<TownSearchResult[]>([])
+  const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
+  const [townSearchStatus, setTownSearchStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle')
 
-  if (!areas.length) return null
+  useEffect(() => {
+    if (!mapElementRef.current || mapRef.current) return
 
-  const north = Math.max(...areas.map((area) => area.bounds.north))
-  const south = Math.min(...areas.map((area) => area.bounds.south))
-  const east = Math.max(...areas.map((area) => area.bounds.east))
-  const west = Math.min(...areas.map((area) => area.bounds.west))
-
-  function startDrag(clientX: number, clientY: number) {
-    dragRef.current = { x: clientX, y: clientY, panX: pan.x, panY: pan.y, moved: false }
-    setDragging(false)
-  }
-
-  function updateDrag(clientX: number, clientY: number) {
-    if (!dragRef.current) return
-    const deltaX = clientX - dragRef.current.x
-    const deltaY = clientY - dragRef.current.y
-    const moved = Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6
-    if (!moved && !dragRef.current.moved) return
-    dragRef.current.moved = true
-    setDragging(true)
-    setPan({
-      x: Math.max(-140, Math.min(140, dragRef.current.panX + deltaX)),
-      y: Math.max(-110, Math.min(110, dragRef.current.panY + deltaY)),
+    const map = L.map(mapElementRef.current, {
+      center: [DEFAULT_TOWN.coords.lat, DEFAULT_TOWN.coords.lng],
+      zoom: 16,
+      zoomControl: true,
+      scrollWheelZoom: true,
     })
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map)
+
+    routeLayerRef.current = L.layerGroup().addTo(map)
+    markerLayerRef.current = L.layerGroup().addTo(map)
+    mapRef.current = map
+
+    window.setTimeout(() => map.invalidateSize(), 80)
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+      markerLayerRef.current = null
+      routeLayerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const layer = markerLayerRef.current
+    if (!map || !layer) return
+
+    layer.clearLayers()
+
+    if (!userCoords) {
+      routeLayerRef.current?.clearLayers()
+    }
+
+    const venueIcon = (active: boolean) =>
+      L.divIcon({
+        className: classNames('leaflet-night-marker', 'venue-leaflet-marker', active && 'active'),
+        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      })
+
+    const eventIcon = (active: boolean) =>
+      L.divIcon({
+        className: classNames('leaflet-night-marker', 'event-leaflet-marker', active && 'active'),
+        html: `<span class="marker-glow"></span>${EVENT_MARKER_SVG}`,
+        iconSize: [48, 58],
+        iconAnchor: [24, 54],
+      })
+
+    const venuePopup = (venue: VenueWithDistance) => {
+      const popup = document.createElement('div')
+      popup.className = 'event-map-popup venue-map-popup'
+
+      const kicker = document.createElement('p')
+      kicker.className = 'event-map-popup-kicker'
+      kicker.textContent = `${venue.type} | ${venue.price_band}`
+
+      const title = document.createElement('strong')
+      title.textContent = venue.name
+
+      const meta = document.createElement('span')
+      meta.textContent = `${venue.address} | ${venue.opens_at} - ${venue.closes_at}`
+
+      const directions = document.createElement('a')
+      directions.href = mapsUrl(venue.coordinates)
+      directions.target = '_blank'
+      directions.rel = 'noreferrer'
+      directions.textContent = 'Open in maps'
+
+      popup.append(kicker, title, meta, directions)
+      return popup
+    }
+
+    const drawSimpleRoute = (item: EventWithDistance) => {
+      if (!userCoords || !routeLayerRef.current) return
+
+      const start = L.latLng(userCoords.lat, userCoords.lng)
+      const destination = L.latLng(item.venue.coordinates.lat, item.venue.coordinates.lng)
+
+      routeLayerRef.current.clearLayers()
+      L.polyline([start, destination], {
+        className: 'simple-route-line',
+        color: '#32c3ff',
+        weight: 5,
+        opacity: 0.92,
+        dashArray: '10 12',
+        lineCap: 'round',
+      }).addTo(routeLayerRef.current)
+
+      L.circleMarker(start, {
+        className: 'simple-route-start',
+        radius: 8,
+        color: '#fff9ef',
+        fillColor: '#32c3ff',
+        fillOpacity: 1,
+        weight: 3,
+      }).addTo(routeLayerRef.current)
+
+      L.circleMarker(destination, {
+        className: 'simple-route-finish',
+        radius: 9,
+        color: '#fff9ef',
+        fillColor: '#ff7a29',
+        fillOpacity: 1,
+        weight: 3,
+      }).addTo(routeLayerRef.current)
+
+      map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+    }
+
+    const eventPopup = (item: EventWithDistance) => {
+      const popup = document.createElement('div')
+      popup.className = 'event-map-popup'
+
+      const kicker = document.createElement('p')
+      kicker.className = 'event-map-popup-kicker'
+      kicker.textContent = `${item.genre} | ${item.price_label}`
+
+      const title = document.createElement('strong')
+      title.textContent = item.title
+
+      const meta = document.createElement('span')
+      meta.textContent = `${item.venue.name} | ${formatDateTime(item.start_at, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+
+      const directions = document.createElement('a')
+      directions.href = mapsUrl(item.venue.coordinates)
+      directions.target = '_blank'
+      directions.rel = 'noreferrer'
+      directions.textContent = 'Open in maps'
+
+      const inAppRoute = document.createElement('button')
+      inAppRoute.type = 'button'
+      inAppRoute.className = 'event-map-popup-route'
+      inAppRoute.textContent = userCoords ? 'Show route on map' : 'Use location first'
+      inAppRoute.disabled = !userCoords
+      inAppRoute.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        drawSimpleRoute(item)
+      })
+
+      if (userCoords) {
+        const routeHint = document.createElement('small')
+        const miles = distanceMiles(userCoords, item.venue.coordinates)
+        const walkingMinutes = Math.max(1, Math.round(miles * 20))
+        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
+        return popup
+      }
+
+      popup.append(kicker, title, meta, inAppRoute, directions)
+      return popup
+    }
+
+    venues.forEach((venue) => {
+      const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
+      L.marker(venuePosition, {
+        icon: venueIcon(selectedVenueId === venue.id),
+        title: venue.name,
+      })
+        .bindPopup(venuePopup(venue), {
+          className: 'nightlife-leaflet-popup',
+          closeButton: true,
+          maxWidth: 260,
+        })
+        .on('click', () => {
+          map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
+        })
+        .addTo(layer)
+    })
+
+    events.forEach((item, index) => {
+      const offset = (index % 5) * 0.000035
+      const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
+      const marker = L.marker(eventPosition, {
+        icon: eventIcon(selectedEventId === item.id),
+        title: item.title,
+        zIndexOffset: 500 + index,
+      })
+        .bindPopup(eventPopup(item), {
+          className: 'nightlife-leaflet-popup',
+          closeButton: true,
+          maxWidth: 260,
+        })
+        .on('click', () => {
+          map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+        })
+        .addTo(layer)
+
+      if (selectedEventId === item.id) {
+        map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+        marker.openPopup()
+      }
+    })
+
+    if (userCoords) {
+      L.marker([userCoords.lat, userCoords.lng], {
+        icon: L.divIcon({
+          className: 'user-avatar-marker',
+          html: '<span class="avatar-pulse"></span><span class="avatar-face"><span></span></span>',
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        }),
+        title: 'You are here',
+        zIndexOffset: 1200,
+      }).addTo(layer)
+    }
+
+    if (!hasFittedInitialMarkers.current && venues.length > 0) {
+      const bounds = L.latLngBounds(venues.map((venue) => [venue.coordinates.lat, venue.coordinates.lng]))
+      map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
+      hasFittedInitialMarkers.current = true
+    }
+  }, [events, selectedEventId, selectedVenueId, userCoords, venues])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const routeLayer = routeLayerRef.current
+    if (!map || !routeLayer) return
+
+    routeLayer.clearLayers()
+    if (!routeTarget || !userCoords) return
+
+    const start = L.latLng(userCoords.lat, userCoords.lng)
+    const destination = L.latLng(routeTarget.venue.coordinates.lat, routeTarget.venue.coordinates.lng)
+
+    L.polyline([start, destination], {
+      className: 'simple-route-line',
+      color: '#32c3ff',
+      weight: 5,
+      opacity: 0.92,
+      dashArray: '10 12',
+      lineCap: 'round',
+    }).addTo(routeLayer)
+
+    L.circleMarker(start, {
+      className: 'simple-route-start',
+      radius: 8,
+      color: '#fff9ef',
+      fillColor: '#32c3ff',
+      fillOpacity: 1,
+      weight: 3,
+    }).addTo(routeLayer)
+
+    L.circleMarker(destination, {
+      className: 'simple-route-finish',
+      radius: 9,
+      color: '#fff9ef',
+      fillColor: '#ff7a29',
+      fillOpacity: 1,
+      weight: 3,
+    }).addTo(routeLayer)
+
+    map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+  }, [routeTarget, userCoords])
+
+  useEffect(() => {
+    const area = areas.find((item) => item.slug === selectedArea)
+    if (!area || !mapRef.current) return
+    mapRef.current.setView([area.center.lat, area.center.lng], 16, { animate: true })
+    setSelectedTown(area.name)
+  }, [areas, selectedArea])
+
+  async function searchIrelandTown(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const query = townQuery.trim()
+    if (!query) return
+
+    setTownSearchStatus('loading')
+    setTownResults([])
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=ie&limit=8&addressdetails=1&q=${encodeURIComponent(
+          query,
+        )}`,
+      )
+      if (!response.ok) throw new Error('Town search failed')
+      const results = (await response.json()) as TownSearchResult[]
+      setTownResults(results)
+      setTownSearchStatus(results.length ? 'idle' : 'empty')
+    } catch {
+      setTownSearchStatus('error')
+    }
   }
 
-  function consumeDragClick() {
-    if (!dragRef.current?.moved) return false
-    dragRef.current = null
-    setDragging(false)
-    return true
-  }
+  function chooseTown(result: TownSearchResult) {
+    const lat = Number(result.lat)
+    const lng = Number(result.lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
 
-  function endDrag() {
-    dragRef.current = null
-    setDragging(false)
+    mapRef.current?.setView([lat, lng], 16, { animate: true })
+    setSelectedTown(result.display_name.split(',').slice(0, 3).join(', '))
+    setTownResults([])
+    setTownQuery('')
   }
 
   return (
     <div className="hero-panel district-panel">
       <div className="section-topline">
-        <span>Town map</span>
-        <small>Drag to explore and tap an event pulse for live info</small>
+        <span>Live town map</span>
+        <small>Zoom to building level, switch Irish towns, and use route buttons for in-app directions</small>
       </div>
-      <div
-        className={classNames('map-board', dragging && 'dragging')}
-        onMouseDown={(event) => startDrag(event.clientX, event.clientY)}
-        onMouseMove={(event) => updateDrag(event.clientX, event.clientY)}
-        onMouseUp={endDrag}
-        onMouseLeave={endDrag}
-        onTouchStart={(event) => {
-          const touch = event.touches[0]
-          if (touch) startDrag(touch.clientX, touch.clientY)
-        }}
-        onTouchMove={(event) => {
-          const touch = event.touches[0]
-          if (touch) updateDrag(touch.clientX, touch.clientY)
-        }}
-        onTouchEnd={endDrag}
-      >
-        <div className="map-canvas" style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}>
-          {areas.map((area, index) => {
-            const left = ((area.center.lng - west) / (east - west)) * 100
-            const top = 100 - ((area.center.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={area.id}
-                className={classNames(
-                  'map-area-chip',
-                  selectedArea === area.slug && 'active',
-                  `district-tone-${(index % 3) + 1}`,
-                )}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={() => {
-                  if (consumeDragClick()) return
-                  onSelectArea(selectedArea === area.slug ? '' : area.slug)
-                }}
-              >
-                {area.name}
-              </button>
-            )
-          })}
-          {venues.map((venue) => {
-            const left = ((venue.coordinates.lng - west) / (east - west)) * 100
-            const top = 100 - ((venue.coordinates.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={venue.id}
-                type="button"
-                className={classNames('map-pin', 'map-pin-button', selectedVenueId === venue.id && 'active')}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (consumeDragClick()) return
-                  onSelectVenue(venue)
-                }}
-              >
-                <span>{venue.name}</span>
-              </button>
-            )
-          })}
-          {events.map((item) => {
-            const left = ((item.venue.coordinates.lng - west) / (east - west)) * 100
-            const top = 100 - ((item.venue.coordinates.lat - south) / (north - south)) * 100
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={classNames('event-pin', selectedEventId === item.id && 'active')}
-                style={{ left: `${left}%`, top: `${top}%` }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (consumeDragClick()) return
-                  onSelectEvent(item)
-                }}
-              >
-                <span>{item.title}</span>
-              </button>
-            )
-          })}
+
+      <div className="map-toolbar">
+        <div>
+          <span className="map-eyebrow">Viewing</span>
+          <strong>{selectedTown}</strong>
         </div>
+        <form className="map-search" onSubmit={searchIrelandTown}>
+          <input
+            type="search"
+            value={townQuery}
+            onChange={(event) => setTownQuery(event.target.value)}
+            placeholder="Search any town in Ireland"
+            aria-label="Search any town in Ireland"
+          />
+          <button type="submit">{townSearchStatus === 'loading' ? 'Searching...' : 'Go'}</button>
+        </form>
+      </div>
+
+      {townResults.length ? (
+        <div className="map-search-results">
+          {townResults.map((result) => (
+            <button key={result.place_id} type="button" onClick={() => chooseTown(result)}>
+              {result.display_name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {townSearchStatus === 'empty' ? <p className="map-search-note">No Irish town matches found. Try a nearby place name.</p> : null}
+      {townSearchStatus === 'error' ? <p className="map-search-note">Town search is unavailable right now. The map still works normally.</p> : null}
+
+      {areas.length ? (
+        <div className="map-area-strip">
+          {areas.map((area, index) => (
+            <button
+              key={area.id}
+              className={classNames(
+                'map-area-pill',
+                selectedArea === area.slug && 'active',
+                `district-tone-${(index % 3) + 1}`,
+              )}
+              type="button"
+              onClick={() => onSelectArea(selectedArea === area.slug ? '' : area.slug)}
+            >
+              {area.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="map-board real-map-board">
+        <div ref={mapElementRef} className="leaflet-map" aria-label="Interactive town nightlife map" />
       </div>
     </div>
   )
@@ -392,6 +684,7 @@ function HomePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all')
   const [selectedEvent, setSelectedEvent] = useState<EventWithDistance | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<VenueWithDistance | null>(null)
+  const [routeTarget, setRouteTarget] = useState<EventWithDistance | null>(null)
   const { areas, venues, events } = useDiscoveryData(filters)
 
   const venueData = venues.data ?? []
@@ -431,6 +724,13 @@ function HomePage() {
 
   const displayedEvents = activeTab === 'nearby' ? nearbyEvents : allEventsWithDistance
   const spotlight = venuesWithDistance[0] ?? null
+
+  function showEventRouteInMap(event: EventWithDistance) {
+    setRouteTarget(event)
+    if (!location.coords) location.requestLocation()
+    setSelectedEvent(null)
+    setSelectedVenue(null)
+  }
 
   return (
     <div className="nightlife-app">
@@ -484,15 +784,9 @@ function HomePage() {
           selectedArea={filters.area}
           selectedEventId={selectedEvent?.id ?? null}
           selectedVenueId={selectedVenue?.id ?? null}
+          userCoords={location.coords}
+          routeTarget={routeTarget}
           onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
-          onSelectEvent={(event) => {
-            setSelectedEvent(event)
-            setSelectedVenue(null)
-          }}
-          onSelectVenue={(venue) => {
-            setSelectedVenue(venue)
-            setSelectedEvent(null)
-          }}
         />
       </section>
       <section className="filter-surface">
@@ -603,7 +897,13 @@ function HomePage() {
           </div>
         </div>
       </section>
-      <SidePanel selectedEvent={selectedEvent} selectedVenue={selectedVenue} onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }} />
+      <SidePanel
+        selectedEvent={selectedEvent}
+        selectedVenue={selectedVenue}
+        hasLocation={Boolean(location.coords)}
+        onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
+        onShowEventRoute={showEventRouteInMap}
+      />
     </div>
   )
 }
