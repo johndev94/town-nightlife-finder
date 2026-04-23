@@ -837,6 +837,17 @@ body[data-theme="light"] .toggle-pill span {
   background: rgba(255,255,255,0.06);
 }
 
+button.inline-route {
+  cursor: pointer;
+  font: inherit;
+}
+
+.side-route-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: #08111f;
+  font-weight: 900;
+}
+
 .inline-route.subtle {
   color: var(--muted);
 }

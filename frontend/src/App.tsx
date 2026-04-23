@@ -141,11 +141,15 @@ function AppBackground() {
 function SidePanel({
   selectedEvent,
   selectedVenue,
+  hasLocation,
   onClose,
+  onShowEventRoute,
 }: {
   selectedEvent: EventWithDistance | null
   selectedVenue: VenueWithDistance | null
+  hasLocation: boolean
   onClose: () => void
+  onShowEventRoute: (event: EventWithDistance) => void
 }) {
   if (!selectedEvent && !selectedVenue) return null
 
@@ -238,6 +242,11 @@ function SidePanel({
         </div>
         {destination ? (
           <div className="action-row side-actions">
+            {selectedEvent ? (
+              <button className="inline-route side-route-button" type="button" onClick={() => onShowEventRoute(selectedEvent)}>
+                {hasLocation ? 'Show route in app' : 'Use location for route'}
+              </button>
+            ) : null}
             <a className="inline-route" href={mapsUrl(destination)} target="_blank" rel="noreferrer">
               Directions
             </a>
@@ -265,6 +274,7 @@ function MapPanel({
   selectedEventId,
   selectedVenueId,
   userCoords,
+  routeTarget,
   onSelectArea,
 }: {
   areas: Area[]
@@ -274,6 +284,7 @@ function MapPanel({
   selectedEventId: number | null
   selectedVenueId: number | null
   userCoords: Coords | null
+  routeTarget: EventWithDistance | null
   onSelectArea: (slug: string) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
@@ -514,6 +525,47 @@ function MapPanel({
   }, [events, selectedEventId, selectedVenueId, userCoords, venues])
 
   useEffect(() => {
+    const map = mapRef.current
+    const routeLayer = routeLayerRef.current
+    if (!map || !routeLayer) return
+
+    routeLayer.clearLayers()
+    if (!routeTarget || !userCoords) return
+
+    const start = L.latLng(userCoords.lat, userCoords.lng)
+    const destination = L.latLng(routeTarget.venue.coordinates.lat, routeTarget.venue.coordinates.lng)
+
+    L.polyline([start, destination], {
+      className: 'simple-route-line',
+      color: '#32c3ff',
+      weight: 5,
+      opacity: 0.92,
+      dashArray: '10 12',
+      lineCap: 'round',
+    }).addTo(routeLayer)
+
+    L.circleMarker(start, {
+      className: 'simple-route-start',
+      radius: 8,
+      color: '#fff9ef',
+      fillColor: '#32c3ff',
+      fillOpacity: 1,
+      weight: 3,
+    }).addTo(routeLayer)
+
+    L.circleMarker(destination, {
+      className: 'simple-route-finish',
+      radius: 9,
+      color: '#fff9ef',
+      fillColor: '#ff7a29',
+      fillOpacity: 1,
+      weight: 3,
+    }).addTo(routeLayer)
+
+    map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+  }, [routeTarget, userCoords])
+
+  useEffect(() => {
     const area = areas.find((item) => item.slug === selectedArea)
     if (!area || !mapRef.current) return
     mapRef.current.setView([area.center.lat, area.center.lng], 16, { animate: true })
@@ -558,7 +610,7 @@ function MapPanel({
     <div className="hero-panel district-panel">
       <div className="section-topline">
         <span>Live town map</span>
-        <small>Zoom to building level, switch Irish towns, and tap markers for the side panel</small>
+        <small>Zoom to building level, switch Irish towns, and use route buttons for in-app directions</small>
       </div>
 
       <div className="map-toolbar">
@@ -632,6 +684,7 @@ function HomePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all')
   const [selectedEvent, setSelectedEvent] = useState<EventWithDistance | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<VenueWithDistance | null>(null)
+  const [routeTarget, setRouteTarget] = useState<EventWithDistance | null>(null)
   const { areas, venues, events } = useDiscoveryData(filters)
 
   const venueData = venues.data ?? []
@@ -671,6 +724,13 @@ function HomePage() {
 
   const displayedEvents = activeTab === 'nearby' ? nearbyEvents : allEventsWithDistance
   const spotlight = venuesWithDistance[0] ?? null
+
+  function showEventRouteInMap(event: EventWithDistance) {
+    setRouteTarget(event)
+    if (!location.coords) location.requestLocation()
+    setSelectedEvent(null)
+    setSelectedVenue(null)
+  }
 
   return (
     <div className="nightlife-app">
@@ -725,6 +785,7 @@ function HomePage() {
           selectedEventId={selectedEvent?.id ?? null}
           selectedVenueId={selectedVenue?.id ?? null}
           userCoords={location.coords}
+          routeTarget={routeTarget}
           onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
         />
       </section>
@@ -836,7 +897,13 @@ function HomePage() {
           </div>
         </div>
       </section>
-      <SidePanel selectedEvent={selectedEvent} selectedVenue={selectedVenue} onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }} />
+      <SidePanel
+        selectedEvent={selectedEvent}
+        selectedVenue={selectedVenue}
+        hasLocation={Boolean(location.coords)}
+        onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
+        onShowEventRoute={showEventRouteInMap}
+      />
     </div>
   )
 }
