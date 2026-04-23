@@ -1,0 +1,70 @@
+{
+  "count": 4,
+  "results": [
+    {
+      "venue": {
+        "id": 3,
+        "name": "Dockside Social",
+        "slug": "dockside-social"
+      },
+      "source_url": "https://instagram.com/docksidesocial",
+      "fetched_at": "2026-04-22T14:21:30+00:00",
+      "status": "unsupported",
+      "confidence": 0.0,
+      "platform": "instagram",
+      "events": [],
+      "notes": [
+        "Skipped unsupported platform source.",
+        "Use official APIs or manual/admin entry for social platforms."
+      ]
+    },
+    {
+      "venue": {
+        "id": 4,
+        "name": "Platform 9 Bar",
+        "slug": "platform-9-bar"
+      },
+      "source_url": "https://platform9bar.example.com/whats-on",
+      "fetched_at": "2026-04-22T14:21:30+00:00",
+      "status": "error",
+      "confidence": 0.0,
+      "platform": "website",
+      "events": [],
+      "notes": [
+        "Fetch failed: HTTPSConnectionPool(host='platform9bar.example.com', port=443): Max retries exceeded with url: /whats-on (Caused by NameResolutionError(\"HTTPSConnection(host='platform9bar.example.com', port=443): Failed to resolve 'platform9bar.example.com' ([Errno 11001] getaddrinfo failed)\"))"
+      ]
+    },
+    {
+      "venue": {
+        "id": 1,
+        "name": "The Lantern Arms",
+        "slug": "the-lantern-arms"
+      },
+      "source_url": "https://lanternarms.example.com/events",
+      "fetched_at": "2026-04-22T14:21:30+00:00",
+      "status": "error",
+      "confidence": 0.0,
+      "platform": "website",
+      "events": [],
+      "notes": [
+        "Fetch failed: HTTPSConnectionPool(host='lanternarms.example.com', port=443): Max retries exceeded with url: /events (Caused by NameResolutionError(\"HTTPSConnection(host='lanternarms.example.com', port=443): Failed to resolve 'lanternarms.example.com' ([Errno 11001] getaddrinfo failed)\"))"
+      ]
+    },
+    {
+      "venue": {
+        "id": 2,
+        "name": "Velvet Room",
+        "slug": "velvet-room"
+      },
+      "source_url": "https://velvetroom.example.com",
+      "fetched_at": "2026-04-22T14:21:30+00:00",
+      "status": "error",
+      "confidence": 0.0,
+      "platform": "website",
+      "events": [],
+      "notes": [
+        "Fetch failed: HTTPSConnectionPool(host='velvetroom.example.com', port=443): Max retries exceeded with url: / (Caused by NameResolutionError(\"HTTPSConnection(host='velvetroom.example.com', port=443): Failed to resolve 'velvetroom.example.com' ([Errno 11001] getaddrinfo failed)\"))"
+      ]
+    }
+  ]
+}

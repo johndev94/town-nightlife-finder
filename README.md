@@ -55,3 +55,64 @@ Demo logins:
 cd C:\Users\Admin\Documents\town-nightlife-finder
 python -m unittest discover -s tests
 ```
+
+## Scraper Starter
+
+There is now a first-pass scraper for venue websites and official source pages.
+
+It currently:
+
+- pulls `source_url` values from published venues
+- skips unsupported social platforms such as Facebook and Instagram
+- extracts events from `application/ld+json` when a site exposes Schema.org `Event` data
+- falls back to simple page-content heuristics for event cards and listings
+- emits a JSON report instead of writing directly into the database
+
+Run it like this:
+
+```powershell
+cd C:\Users\Admin\Documents\town-nightlife-finder
+python scrape_sources.py --limit 10
+```
+
+Scrape just one area:
+
+```powershell
+python scrape_sources.py --area ballina-town
+```
+
+Save results to a file:
+
+```powershell
+python scrape_sources.py --output scraped-events.json
+```
+
+Target one venue:
+
+```powershell
+python scrape_sources.py --slug the-lantern-arms
+```
+
+## Ballina Starter Data
+
+You can seed a first real-world starter set for Ballina, Co. Mayo, Ireland with:
+
+```powershell
+cd C:\Users\Admin\Documents\town-nightlife-finder
+python seed_ballina.py
+```
+
+This adds a `ballina-town` area plus starter venue/source records including:
+
+- Bar Square Ballina
+- Paddy Mac's Ballina
+- McShane's Bar Ballina
+- The Merry Monk
+
+To add a real dated Ballina event plus review placeholders:
+
+```powershell
+python seed_ballina_events.py
+```
+
+Important: this starter is intentionally compliant-first. It does not do unofficial scraping of Facebook, Instagram, TikTok, or similar platforms. The next step would be a review/import workflow that lets you approve scraped events before updating the database.

@@ -1,0 +1,108 @@
+{
+  "count": 4,
+  "results": [
+    {
+      "venue": {
+        "id": 5,
+        "name": "Bar Square Ballina",
+        "slug": "bar-square-ballina"
+      },
+      "source_url": "https://www.barsquare-ballina.com/",
+      "fetched_at": "2026-04-22T14:27:41+00:00",
+      "status": "parsed",
+      "confidence": 0.85,
+      "platform": "website",
+      "events": [
+        {
+          "title": "Three Venues",
+          "start_at": null,
+          "end_at": null,
+          "description": "Three Venues From daytime catch-ups to late-night energy. Food & Drinks Bar Square Fresh food and daily specials from 12pm, friendly service and a room that feels alive, any day of the week. Late night live music Time Square Time Square is our late-night space with DJs, live acts and high-energy nights take over from midnight, the go-to late-night experience in the centre of Ballina. Traditional pub Paddy Macs This is our traditional Irish pub next door, a place you'll receive a warm welcome, a proper pint, live music, conversation and the unmistakable local atmosphere it\u2019s known for.",
+          "price_label": null,
+          "source_url": "https://www.barsquare-ballina.com/",
+          "source_type": "website-scrape"
+        },
+        {
+          "title": "What's On",
+          "start_at": null,
+          "end_at": null,
+          "description": "What's On Multiple Dates Fri, 24 Apr Late Night DJ Sets / Bar Square Details 24 Apr 2026, 23:30 \u2013 25 Apr 2026, 03:30 Bar Square, Garden St, Ballina, Co. Mayo, Ireland Every Friday at Bar Square we play the best DJ set in town to kick-start your weekend right.",
+          "price_label": null,
+          "source_url": "https://www.barsquare-ballina.com/",
+          "source_type": "website-scrape"
+        }
+      ],
+      "notes": [
+        "Extracted 2 event candidate(s) from page content."
+      ]
+    },
+    {
+      "venue": {
+        "id": 7,
+        "name": "McShane's Bar Ballina",
+        "slug": "mcshanes-bar-ballina"
+      },
+      "source_url": "https://www.hotelballina.ie/mcshanes-bar/",
+      "fetched_at": "2026-04-22T14:27:41+00:00",
+      "status": "parsed",
+      "confidence": 0.85,
+      "platform": "website",
+      "events": [
+        {
+          "title": "McShane\u2019s Bar",
+          "start_at": null,
+          "end_at": null,
+          "description": "McShane\u2019s Bar here at Great National Hotel Ballina is a warm and welcoming traditional Irish pub with a vibrant atmosphere. McShane\u2019s Bar not only offers our guests and locals a wide choice of beers, wines, spirits and a selection of delicious cocktails but also fabulous and top-quality food served all day long and weekend music and entertainment. Relax and unwind with a drink and a freshly cooked meal in the cosy surrounds of the McShane\u2019s Bar. McShane\u2019s Bar Our extensive cocktail menu is sure to tickle your taste buds with a wide variety of beautifully balanced Cocktails, many blended with local spirits. Our mixologist\u2019s craft a new Cocktail of the Month experimenting with flavours and is a firm favourite with our regular customers and hotel guests. Treat yourself to sparkles by the glass with our Prosecco \u2018Frizzenti\u2019, fresh from the tap into the glass. Our wine of the month provides customers with two of the highest quality wines with detailed tasting notes and food pairing suggestions for each. Whether you are enjoying a meal, a drink after work, a night out with friends, a family break away or just out for a pint to watch the game, a great evening and night is always guaranteed at McShane\u2019s Bar. Sport at McShane\u2019s Bar If there is a big game happening, you can be sure we are showing it live in McShane\u2019s Bar. Join us in McShane\u2019s Bar for the biggest sporting fixtures whether it be Irish Rugby, GAA, Soccer, Golf you name it, in a vibrant atmosphere and all in 55\u201d HD. Live Music & Entertainment McShane\u2019s Bar is the place to be at the weekends with live music and entertainment every weekend and on selected midweek nights. Both residents and locals are always welcome. Book a table, enjoy a fine meal, relax with great company and great music. Get in Touch If you have any queries please contact us via phone or email. Phone: +353 96 23600 Email: info@hotelballina.ie",
+          "price_label": null,
+          "source_url": "https://www.hotelballina.ie/mcshanes-bar/",
+          "source_type": "website-scrape"
+        }
+      ],
+      "notes": [
+        "Extracted 1 event candidate(s) from page content."
+      ]
+    },
+    {
+      "venue": {
+        "id": 6,
+        "name": "Paddy Mac's Ballina",
+        "slug": "paddy-macs-ballina"
+      },
+      "source_url": "https://www.barsquare-ballina.com/paddy-macs",
+      "fetched_at": "2026-04-22T14:27:42+00:00",
+      "status": "parsed",
+      "confidence": 0.85,
+      "platform": "website",
+      "events": [
+        {
+          "title": "Traditional Local Irish Pub",
+          "start_at": null,
+          "end_at": null,
+          "description": "Traditional Local Irish Pub Paddy Mac\u2019s is the traditional side of the venue, a cosy Irish pub which locals love. It's known for its friendly atmosphere, live music and proper pints. It\u2019s a place to settle in, catch up with friends and enjoy the kind of pub night Ballina is famous for. \u200b Whether you\u2019re calling in for a quiet drink, staying for the music or starting your night before heading next door, Paddy Mac\u2019s offers a relaxed, welcoming space with plenty of character.",
+          "price_label": null,
+          "source_url": "https://www.barsquare-ballina.com/paddy-macs",
+          "source_type": "website-scrape"
+        }
+      ],
+      "notes": [
+        "Extracted 1 event candidate(s) from page content."
+      ]
+    },
+    {
+      "venue": {
+        "id": 8,
+        "name": "The Merry Monk",
+        "slug": "the-merry-monk-ballina"
+      },
+      "source_url": "https://www.themerrymonk.ie/bar-in-ballina/",
+      "fetched_at": "2026-04-22T14:27:42+00:00",
+      "status": "no-events-found",
+      "confidence": 0.25,
+      "platform": "website",
+      "events": [],
+      "notes": [
+        "No event-like content was confidently extracted."
+      ]
+    }
+  ]
+}
