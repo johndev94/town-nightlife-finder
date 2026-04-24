@@ -1,33 +1,33 @@
 :root {
-  --bg: #07111f;
-  --bg-soft: #0d1830;
-  --panel: rgba(8, 15, 31, 0.78);
-  --panel-strong: rgba(9, 20, 41, 0.92);
-  --line: rgba(255, 255, 255, 0.1);
-  --ink: #f7f5ef;
-  --muted: #b4bfd2;
-  --accent: #ff7a29;
-  --accent-2: #f4c95d;
-  --accent-3: #32c3ff;
-  --success: #8ef0c4;
-  --danger: #ff9c9c;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+  --bg: #f6efe6;
+  --bg-soft: #fffaf4;
+  --panel: rgba(255, 252, 247, 0.88);
+  --panel-strong: rgba(255, 251, 245, 0.96);
+  --line: rgba(75, 54, 34, 0.12);
+  --ink: #241d18;
+  --muted: #756456;
+  --accent: #e27a39;
+  --accent-2: #c98d2f;
+  --accent-3: #5baed6;
+  --success: #2d8b66;
+  --danger: #bf5e5e;
+  --shadow: 0 20px 44px rgba(97, 70, 35, 0.1);
 }
 
 body[data-theme="light"] {
-  --bg: #f6f1e8;
-  --bg-soft: #fff9f1;
-  --panel: rgba(255, 251, 245, 0.9);
-  --panel-strong: rgba(255, 248, 239, 0.96);
-  --line: rgba(44, 34, 24, 0.12);
-  --ink: #1f1a16;
-  --muted: #705f52;
-  --accent: #d85c2a;
-  --accent-2: #9d5f00;
-  --accent-3: #1887c7;
+  --bg: #f6efe6;
+  --bg-soft: #fffaf4;
+  --panel: rgba(255, 252, 247, 0.92);
+  --panel-strong: rgba(255, 251, 245, 0.97);
+  --line: rgba(75, 54, 34, 0.12);
+  --ink: #241d18;
+  --muted: #756456;
+  --accent: #d86d35;
+  --accent-2: #b67819;
+  --accent-3: #2d91c6;
   --success: #247a57;
   --danger: #b24f4f;
-  --shadow: 0 24px 70px rgba(69, 48, 21, 0.12);
+  --shadow: 0 20px 44px rgba(69, 48, 21, 0.1);
 }
 
 * { box-sizing: border-box; }
@@ -36,17 +36,35 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 122, 41, 0.26), transparent 24%),
-    radial-gradient(circle at 80% 10%, rgba(50, 195, 255, 0.18), transparent 22%),
-    linear-gradient(160deg, #07111f 0%, #091728 45%, #101f38 100%);
+    radial-gradient(circle at 18% 12%, rgba(226, 122, 57, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 10%, rgba(91, 174, 214, 0.12), transparent 22%),
+    linear-gradient(180deg, #fffaf4 0%, #f8f1e8 48%, #f4eadf 100%);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body[data-theme="light"] {
   background:
-    radial-gradient(circle at 20% 15%, rgba(216, 92, 42, 0.18), transparent 24%),
-    radial-gradient(circle at 80% 10%, rgba(24, 135, 199, 0.12), transparent 22%),
-    linear-gradient(160deg, #f8f3ea 0%, #f2e7d8 45%, #fffaf2 100%);
+    radial-gradient(circle at 18% 12%, rgba(216, 109, 53, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 10%, rgba(45, 145, 198, 0.1), transparent 22%),
+    linear-gradient(180deg, #fffaf4 0%, #f8f1e8 48%, #f4eadf 100%);
+}
+
+body[data-theme="dark"] {
+  --bg: #182130;
+  --bg-soft: #202b3a;
+  --panel: rgba(29, 38, 54, 0.88);
+  --panel-strong: rgba(24, 34, 49, 0.96);
+  --line: rgba(255, 255, 255, 0.08);
+  --ink: #f8f2ea;
+  --muted: #c2c8d5;
+  --accent: #ff8b46;
+  --accent-2: #f4c95d;
+  --accent-3: #68c7f3;
+  --shadow: 0 24px 56px rgba(0, 0, 0, 0.28);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 139, 70, 0.18), transparent 24%),
+    radial-gradient(circle at 82% 10%, rgba(104, 199, 243, 0.14), transparent 22%),
+    linear-gradient(180deg, #131c2a 0%, #1a2534 48%, #202d3e 100%);
 }
 
 a { color: inherit; }
@@ -74,11 +92,11 @@ a { color: inherit; }
 .app-background-art {
   position: absolute;
   inset: 78px 24px auto 24px;
-  height: 560px;
+  height: 500px;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.94;
+  opacity: 0.34;
 }
 
 .app-background-art::after {
@@ -87,14 +105,20 @@ a { color: inherit; }
   inset: 0;
   border-radius: 34px;
   background:
-    linear-gradient(90deg, rgba(7, 17, 31, 0.74) 0%, rgba(7, 17, 31, 0.42) 38%, rgba(7, 17, 31, 0.08) 76%, rgba(7, 17, 31, 0.02) 100%),
-    linear-gradient(180deg, rgba(7, 17, 31, 0.06) 0%, rgba(7, 17, 31, 0.34) 100%);
+    linear-gradient(90deg, rgba(255, 250, 244, 0.68) 0%, rgba(255, 250, 244, 0.3) 38%, rgba(255, 250, 244, 0.04) 76%, rgba(255, 250, 244, 0.01) 100%),
+    linear-gradient(180deg, rgba(255, 250, 244, 0.02) 0%, rgba(255, 250, 244, 0.18) 100%);
 }
 
 body[data-theme="light"] .app-background-art::after {
   background:
     linear-gradient(90deg, rgba(255, 248, 239, 0.76) 0%, rgba(255, 248, 239, 0.44) 38%, rgba(255, 248, 239, 0.08) 76%, rgba(255, 248, 239, 0.02) 100%),
-    linear-gradient(180deg, rgba(255, 248, 239, 0.04) 0%, rgba(255, 248, 239, 0.18) 100%);
+      linear-gradient(180deg, rgba(255, 248, 239, 0.04) 0%, rgba(255, 248, 239, 0.18) 100%);
+}
+
+body[data-theme="dark"] .app-background-art::after {
+  background:
+    linear-gradient(90deg, rgba(19, 28, 42, 0.7) 0%, rgba(19, 28, 42, 0.42) 38%, rgba(19, 28, 42, 0.08) 76%, rgba(19, 28, 42, 0.02) 100%),
+    linear-gradient(180deg, rgba(19, 28, 42, 0.04) 0%, rgba(19, 28, 42, 0.24) 100%);
 }
 
 .hero-shell-rich {
@@ -253,15 +277,22 @@ body[data-theme="light"] .scene-water path:last-child {
   padding: 10px 16px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .theme-toggle {
   padding: 10px 16px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
+}
+
+body[data-theme="dark"] .app-nav a,
+body[data-theme="dark"] .header-actions a,
+body[data-theme="dark"] .link-button,
+body[data-theme="dark"] .theme-toggle {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tile-button {
@@ -288,27 +319,27 @@ body[data-theme="light"] .scene-water path:last-child {
 
 .hero-shell, .venue-hero, .detail-hero {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 20px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 18px;
 }
 
 .hero-panel, .panel, .map-card, .spotlight-card, .venue-tile, .event-tile, .hour-row, .auth-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 22px;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
 }
 
 .hero-panel, .panel, .spotlight-card, .venue-tile, .event-tile, .hour-row, .auth-card {
-  padding: 24px;
+  padding: 20px;
 }
 
 .hero-copy h1, .venue-main h1, .detail-hero h1 {
   margin: 10px 0 14px;
-  font-size: clamp(2.6rem, 6vw, 5.2rem);
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 .kicker, .eyebrow {
@@ -337,10 +368,17 @@ body[data-theme="light"] .scene-water path:last-child {
 }
 
 .hero-metrics div, .info-grid div, .detail-summary div, .stats-bar div {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.48);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+body[data-theme="dark"] .hero-metrics div,
+body[data-theme="dark"] .info-grid div,
+body[data-theme="dark"] .detail-summary div,
+body[data-theme="dark"] .stats-bar div {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .hero-metrics strong, .stats-bar strong {
@@ -369,7 +407,7 @@ body[data-theme="light"] .scene-water path:last-child {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -623,10 +661,10 @@ body[data-theme="light"] .map-pin span {
   width: 100%;
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: 22px;
-  padding: 18px;
+  border-radius: 18px;
+  padding: 16px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .district-tone-1 { background: linear-gradient(140deg, rgba(255, 122, 41, 0.22), rgba(255, 255, 255, 0.05)); }
@@ -636,12 +674,16 @@ body[data-theme="light"] .map-pin span {
 .district-card strong { display: block; margin-bottom: 8px; font-size: 1.08rem; }
 .district-card span { color: var(--muted); line-height: 1.5; }
 
+body[data-theme="dark"] .district-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .filter-surface, .claim-surface {
   margin-top: 22px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: 28px;
-  padding: 24px;
+  border-radius: 22px;
+  padding: 20px;
   box-shadow: var(--shadow);
 }
 
@@ -668,7 +710,7 @@ body[data-theme="light"] .map-pin span {
 }
 
 .tab-button {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.5);
   color: var(--ink);
 }
 
@@ -678,7 +720,7 @@ body[data-theme="light"] .map-pin span {
 }
 
 .secondary-action {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.6);
   color: var(--ink);
 }
 
@@ -709,11 +751,28 @@ input, select, textarea, button {
 
 input, select, textarea {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(75, 54, 34, 0.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
+}
+
+body[data-theme="dark"] input,
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea,
+body[data-theme="dark"] .toggle-field,
+body[data-theme="dark"] .inline-route,
+body[data-theme="dark"] button.secondary,
+body[data-theme="dark"] .filter-actions a,
+body[data-theme="dark"] .pill-row span,
+body[data-theme="dark"] .tile-topline span,
+body[data-theme="dark"] .hero-pills span,
+body[data-theme="dark"] .chip,
+body[data-theme="dark"] .tab-button,
+body[data-theme="dark"] .secondary-action {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 button {
@@ -731,8 +790,8 @@ button {
 .event-tile {
   color: var(--ink);
   background: var(--panel);
-  border-radius: 28px;
-  padding: 24px;
+  border-radius: 20px;
+  padding: 18px;
 }
 
 .tile-button h3,
@@ -764,7 +823,7 @@ button {
 }
 
 button.secondary, .filter-actions a {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.6);
   color: var(--ink);
 }
 
@@ -772,16 +831,16 @@ button.secondary, .filter-actions a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(75, 54, 34, 0.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .toggle-pill {
   width: 62px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(117, 100, 86, 0.14);
 }
 
 .toggle-pill span {
@@ -803,8 +862,8 @@ body[data-theme="light"] .toggle-pill span {
 .spotlight-grid, .listing-grid, .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 22px;
+  gap: 18px;
+  margin-top: 18px;
 }
 
 .pill-row, .social-strip, .social-row, .hero-pills, .card-topline, .tile-topline, .inline-actions {
@@ -815,9 +874,9 @@ body[data-theme="light"] .toggle-pill span {
 
 .pill-row span, .tile-topline span, .hero-pills span, .chip {
   border-radius: 999px;
-  padding: 9px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(75, 54, 34, 0.08);
   color: var(--ink);
   font-size: 0.84rem;
 }
@@ -832,9 +891,9 @@ body[data-theme="light"] .toggle-pill span {
   align-items: center;
   justify-content: center;
   padding: 10px 14px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(75, 54, 34, 0.12);
   border-radius: 999px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.72);
 }
 
 button.inline-route {
@@ -871,7 +930,7 @@ button.inline-route {
 }
 
 .venue-tile:hover, .event-tile:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.22); }
-.venue-tile h3, .event-tile h3 { margin: 16px 0 10px; font-size: 1.3rem; }
+.venue-tile h3, .event-tile h3 { margin: 12px 0 8px; font-size: 1.2rem; }
 .venue-tile p, .event-tile p, .mini-copy { color: var(--muted); line-height: 1.55; }
 
 .data-points, .meta-grid {

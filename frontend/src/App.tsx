@@ -58,7 +58,7 @@ function useCurrentLocation() {
 function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = window.localStorage.getItem('tnf-theme')
-    return saved === 'light' || saved === 'dark' ? saved : 'dark'
+    return saved === 'light' || saved === 'dark' ? saved : 'light'
   })
 
   useMemo(() => {
@@ -687,9 +687,9 @@ function HomePage() {
   const [routeTarget, setRouteTarget] = useState<EventWithDistance | null>(null)
   const { areas, venues, events } = useDiscoveryData(filters)
 
-  const venueData = venues.data ?? []
-  const eventData = events.data ?? []
-  const areaData = areas.data ?? []
+  const venueData = useMemo(() => venues.data ?? [], [venues.data])
+  const eventData = useMemo(() => events.data ?? [], [events.data])
+  const areaData = useMemo(() => areas.data ?? [], [areas.data])
 
   const genres = useMemo(() => Array.from(new Set(eventData.map((item) => item.genre))).sort(), [eventData])
   const venueTypes = useMemo(() => Array.from(new Set(venueData.map((item) => item.type))).sort(), [venueData])
@@ -745,10 +745,9 @@ function HomePage() {
         <div className="hero-panel hero-copy hero-copy-rich">
           <div className="hero-copy-content">
             <p className="kicker">Town nightlife planner</p>
-            <h1>Stay on the page. Explore the night through a richer interactive map.</h1>
+            <h1>Find pubs, bars, clubs, and events in one simple view.</h1>
             <p className="lede">
-              Browse venues and events, tap map pulses, and open a side panel with more
-              information instead of losing your place.
+              Search by town, filter what matters, and check venues, hours, prices, and events without jumping around.
             </p>
             <div className="hero-metrics">
               <div><strong>{venuesWithDistance.length}</strong><span>venues matching now</span></div>
