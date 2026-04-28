@@ -263,7 +263,7 @@ function SidePanel({
   return (
     <>
       <button className="panel-scrim" type="button" onClick={onClose} aria-label="Close panel" />
-      <aside className="side-panel">
+      <aside className="side-panel" role="dialog" aria-modal="true" aria-labelledby="side-panel-title">
         <button className="side-panel-close" type="button" onClick={onClose}>
           x
         </button>
@@ -273,7 +273,7 @@ function SidePanel({
             ? `${selectedEvent.genre} event`
             : `${selectedVenue?.type} in ${selectedVenue?.area.name}`}
         </p>
-        <h2>{title}</h2>
+        <h2 id="side-panel-title">{title}</h2>
         <p className="side-panel-copy">
           {selectedEvent ? selectedEvent.description : selectedVenue?.description}
         </p>
@@ -369,6 +369,7 @@ function SidePanel({
     </>
   )
 }
+
 function MapPanel({
   areas,
   venues,
@@ -955,6 +956,7 @@ function HomePage() {
 
   const displayedEvents = activeTab === 'nearby' ? nearbyEvents : allEventsWithDistance
   const spotlight = venuesWithDistance[0] ?? null
+  const panelOpen = Boolean(selectedEvent || selectedVenue)
 
   function showEventRouteInMap(event: EventWithDistance) {
     setRouteTarget(event)
@@ -965,7 +967,7 @@ function HomePage() {
 
   return (
     <UiThemeProvider mode={theme}>
-      <div className="nightlife-app">
+      <div className={`nightlife-app${panelOpen ? ' panel-open' : ''}`}>
         <AppBackground />
         <Header
           theme={theme}

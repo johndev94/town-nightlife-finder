@@ -78,6 +78,11 @@ a { color: inherit; }
   isolation: isolate;
 }
 
+.nightlife-app.panel-open .app-background-art {
+  opacity: 0.06;
+  transition: opacity 180ms ease;
+}
+
 .nightlife-app > section,
 .nightlife-app > header,
 .nightlife-app > a,
@@ -1078,8 +1083,15 @@ button.inline-route {
 .panel-scrim {
   position: fixed;
   inset: 0;
+  padding: 0;
+  margin: 0;
   border: none;
-  background: rgba(5, 10, 20, 0.55);
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(9, 17, 31, 0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 40;
 }
 
@@ -1093,7 +1105,7 @@ button.inline-route {
   border-radius: 28px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+  box-shadow: 0 28px 80px rgba(6, 12, 24, 0.28);
   z-index: 45;
   overflow: auto;
 }
@@ -1207,6 +1219,24 @@ button.inline-route {
 .side-panel > * {
   position: relative;
   z-index: 1;
+}
+
+.side-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+  pointer-events: none;
+  z-index: 0;
+}
+
+body[data-theme="dark"] .panel-scrim {
+  background: rgba(3, 8, 18, 0.56);
+}
+
+body[data-theme="dark"] .side-panel {
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
 }
 
 .spotlight-banner {
