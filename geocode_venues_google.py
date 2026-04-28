@@ -8,6 +8,7 @@ from app import create_app
 from app.db import get_db
 from app.google_places import (
     GooglePlacesClient,
+    apply_manual_location,
     apply_correction,
     ensure_google_place_columns,
     find_best_candidate,
@@ -25,6 +26,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-score", type=float, default=0.62, help="Minimum match score required before applying.")
     parser.add_argument("--no-address-update", action="store_true", help="Keep the existing address and only update coordinates/Google metadata.")
     parser.add_argument("--pause", type=float, default=0.15, help="Seconds to pause between Google requests.")
+    parser.add_argument("--manual-lat", type=float, help="Manually set latitude for --slug.")
+    parser.add_argument("--manual-lng", type=float, help="Manually set longitude for --slug.")
+    parser.add_argument("--manual-address", help="Optional address to store with a manual coordinate correction.")
     return parser.parse_args()
 
 
@@ -73,20 +77,46 @@ def print_correction(correction: Any, will_apply: bool) -> None:
 def main() -> None:
     args = parse_args()
     load_env_file()
-    api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
-    if not api_key:
-        raise SystemExit(
-            "Missing GOOGLE_MAPS_API_KEY. Add it to .env or set it in PowerShell before running this command."
-        )
 
     app = create_app()
-    client = GooglePlacesClient(api_key)
     applied = 0
     checked = 0
 
     with app.app_context():
         db = get_db()
         ensure_google_place_columns(db)
+
+        if args.manual_lat is not None or args.manual_lng is not None:
+            if not args.slug or args.manual_lat is None or args.manual_lng is None:
+                raise SystemExit("Manual correction requires --slug, --manual-lat, and --manual-lng.")
+            if not args.apply:
+                print(
+                    f"Dry-run manual correction for {args.slug}: "
+                    f"{args.manual_lat}, {args.manual_lng}"
+                )
+                print("Re-run with --apply to update the database.")
+                return
+            updated = apply_manual_location(
+                db,
+                args.slug,
+                args.manual_lat,
+                args.manual_lng,
+                address=args.manual_address,
+                notes="Manual correction after reviewing Google/venue location.",
+            )
+            if not updated:
+                raise SystemExit(f"No venue found for slug: {args.slug}")
+            db.commit()
+            print(f"Updated {args.slug} to {args.manual_lat}, {args.manual_lng}.")
+            return
+
+        api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+        if not api_key:
+            raise SystemExit(
+                "Missing GOOGLE_MAPS_API_KEY. Add it to .env or set it in PowerShell before running this command."
+            )
+
+        client = GooglePlacesClient(api_key)
         venues = fetch_venues(db, args.area, args.slug, args.limit)
         if not venues:
             print("No published venues matched those filters.")

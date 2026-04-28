@@ -4,7 +4,15 @@ import unittest
 
 from app import create_app
 from app.db import get_db, init_db
-from app.google_places import VenueCandidate, VenueCorrection, apply_correction, candidate_from_place, ensure_google_place_columns
+from app.google_places import (
+    VenueCandidate,
+    VenueCorrection,
+    address_contains_required_location,
+    apply_correction,
+    apply_manual_location,
+    candidate_from_place,
+    ensure_google_place_columns,
+)
 
 
 class GooglePlacesCorrectionTestCase(unittest.TestCase):
@@ -37,6 +45,10 @@ class GooglePlacesCorrectionTestCase(unittest.TestCase):
         self.assertEqual(candidate.place_id, "google-place-123")
         self.assertEqual(candidate.latitude, 54.11495)
         self.assertGreater(candidate.score, 0.5)
+
+    def test_required_location_rejects_wrong_town(self):
+        self.assertTrue(address_contains_required_location("Garden Street, Ballina, Co. Mayo, Ireland", "Ballina Town"))
+        self.assertFalse(address_contains_required_location("Main Street, Dublin, Ireland", "Ballina Town"))
 
     def test_apply_correction_updates_venue_and_source(self):
         db = get_db()
@@ -77,6 +89,24 @@ class GooglePlacesCorrectionTestCase(unittest.TestCase):
         ).fetchone()
         self.assertIsNotNone(source)
         self.assertEqual(source["confidence"], 0.91)
+
+    def test_manual_location_override_updates_coordinates(self):
+        db = get_db()
+        updated = apply_manual_location(
+            db,
+            "the-lantern-arms",
+            53.95,
+            -1.08,
+            address="Manual Test Address",
+        )
+        db.commit()
+
+        self.assertTrue(updated)
+        venue = db.execute("SELECT * FROM venues WHERE slug = 'the-lantern-arms'").fetchone()
+        self.assertEqual(venue["latitude"], 53.95)
+        self.assertEqual(venue["longitude"], -1.08)
+        self.assertEqual(venue["address"], "Manual Test Address")
+        self.assertEqual(venue["sync_status"], "manual-location")
 
 
 if __name__ == "__main__":

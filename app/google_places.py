@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -22,6 +23,10 @@ GOOGLE_FIELD_MASK = ",".join(
         "places.businessStatus",
     ]
 )
+
+
+def normalise_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
 @dataclass(frozen=True)
@@ -100,13 +105,22 @@ def build_venue_query(venue: Any) -> str:
     return ", ".join(piece for piece in pieces if piece)
 
 
+def address_contains_required_location(address: str, area_name: str) -> bool:
+    normalised_address = normalise_text(address)
+    town = normalise_text(area_name).replace(" town", "").strip()
+    has_town = bool(town and town in normalised_address)
+    has_ireland = "ireland" in normalised_address or " ie" in f" {normalised_address} "
+    has_mayo = "mayo" in normalised_address if town == "ballina" else True
+    return has_town and has_ireland and has_mayo
+
+
 def score_place(venue_name: str, area_name: str, place: dict[str, Any]) -> float:
     display_name = (place.get("displayName") or {}).get("text") or ""
     address = place.get("formattedAddress") or ""
-    name_score = SequenceMatcher(None, venue_name.lower(), display_name.lower()).ratio()
-    area_score = 0.12 if area_name.lower().replace(" town", "") in address.lower() else 0
+    name_score = SequenceMatcher(None, normalise_text(venue_name), normalise_text(display_name)).ratio()
+    location_score = 0.24 if address_contains_required_location(address, area_name) else -0.45
     open_score = 0.08 if place.get("businessStatus") != "CLOSED_PERMANENTLY" else -0.35
-    return round(min(1.0, max(0.0, name_score + area_score + open_score)), 3)
+    return round(min(1.0, max(0.0, name_score + location_score + open_score)), 3)
 
 
 def candidate_from_place(venue: Any, place: dict[str, Any]) -> VenueCandidate | None:
@@ -145,7 +159,12 @@ def find_best_candidate(client: GooglePlacesClient, venue: Any) -> VenueCorrecti
             error=str(exc),
         )
 
-    candidates = [candidate for place in places if (candidate := candidate_from_place(venue, place))]
+    candidates = [
+        candidate
+        for place in places
+        if address_contains_required_location(place.get("formattedAddress") or "", venue["area_name"])
+        if (candidate := candidate_from_place(venue, place))
+    ]
     best = max(candidates, key=lambda candidate: candidate.score, default=None)
     return VenueCorrection(
         venue_id=venue["id"],
@@ -209,6 +228,38 @@ def apply_correction(db: Any, correction: VenueCorrection, update_address: bool 
             f"Matched Google Place ID {candidate.place_id} from query: {correction.query}",
         ),
     )
+
+
+def apply_manual_location(
+    db: Any,
+    slug: str,
+    latitude: float,
+    longitude: float,
+    address: str | None = None,
+    notes: str | None = None,
+) -> bool:
+    venue = db.execute("SELECT id, address FROM venues WHERE slug = ?", (slug,)).fetchone()
+    if venue is None:
+        return False
+
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    db.execute(
+        """
+        UPDATE venues
+        SET address = ?, latitude = ?, longitude = ?, sync_status = ?, confidence = ?, last_verified_at = ?
+        WHERE id = ?
+        """,
+        (address or venue["address"], latitude, longitude, "manual-location", 1.0, now, venue["id"]),
+    )
+    db.execute(
+        """
+        INSERT INTO sources
+        (entity_type, entity_id, platform, source_type, source_url, sync_status, confidence, last_verified_at, notes)
+        VALUES ('venue', ?, 'Manual location', 'manual', NULL, 'manual-location', 1.0, ?, ?)
+        """,
+        (venue["id"], now, notes or f"Manual coordinate override for {slug}: {latitude}, {longitude}"),
+    )
+    return True
 
 
 def rate_limit_pause(seconds: float) -> None:

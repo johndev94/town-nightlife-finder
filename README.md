@@ -146,6 +146,12 @@ Correct a single venue:
 python geocode_venues_google.py --slug bar-square-ballina --apply
 ```
 
+Manually correct a venue when Google returns the wrong match:
+
+```powershell
+python geocode_venues_google.py --slug bar-square-ballina --manual-lat 54.114658 --manual-lng -9.157807 --manual-address "Garden Street, Ballina, Co. Mayo, Ireland" --apply
+```
+
 Useful options:
 
 - `--min-score 0.72` only applies stronger matches.
