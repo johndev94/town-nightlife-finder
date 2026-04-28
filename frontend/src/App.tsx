@@ -1,6 +1,42 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import {
+  AppBar,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  CssBaseline,
+  FormControl,
+  FormControlLabel,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Switch,
+  TextField,
+  ThemeProvider,
+  ToggleButton,
+  ToggleButtonGroup,
+  Toolbar,
+  Typography,
+  createTheme,
+} from '@mui/material'
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
+import ExploreRoundedIcon from '@mui/icons-material/ExploreRounded'
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
+import LocationOnRoundedIcon from '@mui/icons-material/LocationOnRounded'
+import MyLocationRoundedIcon from '@mui/icons-material/MyLocationRounded'
+import NightlifeRoundedIcon from '@mui/icons-material/NightlifeRounded'
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded'
+import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 
 import { initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
@@ -34,6 +70,60 @@ const EVENT_MARKER_SVG = `
     <path class="event-pin-note" d="M37 18v20.5a5.5 5.5 0 1 1-3-4.9V23l-12 3v14.5a5.5 5.5 0 1 1-3-4.9V23.7L37 18Z" />
   </svg>
 `
+
+function UiThemeProvider({ mode, children }: { mode: Theme; children: ReactNode }) {
+  const muiTheme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+          primary: { main: mode === 'dark' ? '#7dd3fc' : '#0f766e' },
+          secondary: { main: mode === 'dark' ? '#c084fc' : '#2563eb' },
+          background: {
+            default: mode === 'dark' ? '#070b14' : '#f7fafc',
+            paper: mode === 'dark' ? '#111827' : '#ffffff',
+          },
+          text: {
+            primary: mode === 'dark' ? '#f8fafc' : '#17202a',
+            secondary: mode === 'dark' ? '#a9b7ca' : '#5c6b7a',
+          },
+        },
+        shape: { borderRadius: 8 },
+        typography: {
+          fontFamily: '"Aptos", "Segoe UI", sans-serif',
+          h1: { fontWeight: 800, letterSpacing: 0 },
+          h2: { fontWeight: 800, letterSpacing: 0 },
+          h3: { fontWeight: 750, letterSpacing: 0 },
+          button: { fontWeight: 750, textTransform: 'none' },
+        },
+        components: {
+          MuiCard: {
+            styleOverrides: {
+              root: {
+                border: mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(23,111,143,0.12)',
+                boxShadow: mode === 'dark' ? '0 18px 42px rgba(0,0,0,0.24)' : '0 16px 34px rgba(34,71,82,0.08)',
+              },
+            },
+          },
+          MuiPaper: {
+            styleOverrides: {
+              root: {
+                backgroundImage: 'none',
+              },
+            },
+          },
+        },
+      }),
+    [mode],
+  )
+
+  return (
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline enableColorScheme />
+      {children}
+    </ThemeProvider>
+  )
+}
 
 function useCurrentLocation() {
   const [coords, setCoords] = useState<Coords | null>(null)
@@ -84,25 +174,38 @@ function Header({
   onUseLocation: () => void
 }) {
   return (
-    <header className="app-header">
-      <a className="app-brand" href="/">
-        <span className="brand-badge">TN</span>
-        <span>
-          <strong>Town Nightlife Finder</strong>
-          <small>Map it, sort it, and stay in the flow</small>
-        </span>
-      </a>
-      <nav className="app-nav">
-        <a href="/">Explore town</a>
-        <a href="/login">Admin / Owner</a>
-        <button className="theme-toggle" type="button" onClick={onUseLocation}>
-          {hasLocation ? 'Location on' : 'Use location'}
-        </button>
-        <button className="theme-toggle" type="button" onClick={onToggleTheme}>
-          {theme === 'dark' ? 'Bright mode' : 'Dark mode'}
-        </button>
-      </nav>
-    </header>
+    <AppBar className="mui-app-header" color="transparent" elevation={0} position="static">
+      <Toolbar disableGutters sx={{ gap: 2, justifyContent: 'space-between', py: 2 }}>
+        <Stack component="a" direction="row" href="/" sx={{ alignItems: 'center', color: 'text.primary', gap: 1.5, textDecoration: 'none' }}>
+          <Box className="brand-badge mui-brand-badge">
+            <NightlifeRoundedIcon fontSize="small" />
+          </Box>
+          <Box>
+            <Typography sx={{ fontWeight: 850, lineHeight: 1.1 }}>Town Nightlife Finder</Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '0.82rem' }}>Map, filter, and plan the night</Typography>
+          </Box>
+        </Stack>
+        <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: 'flex-end' }}>
+          <Button color="inherit" href="/" startIcon={<ExploreRoundedIcon />} variant="text">
+            Explore
+          </Button>
+          <Button color="inherit" href="/login" startIcon={<AdminPanelSettingsRoundedIcon />} variant="outlined">
+            Admin
+          </Button>
+          <Button
+            color={hasLocation ? 'success' : 'primary'}
+            onClick={onUseLocation}
+            startIcon={hasLocation ? <LocationOnRoundedIcon /> : <MyLocationRoundedIcon />}
+            variant={hasLocation ? 'contained' : 'outlined'}
+          >
+            {hasLocation ? 'Location on' : 'Use location'}
+          </Button>
+          <IconButton aria-label="Toggle theme" color="inherit" onClick={onToggleTheme}>
+            {theme === 'dark' ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
+          </IconButton>
+        </Stack>
+      </Toolbar>
+    </AppBar>
   )
 }
 
@@ -669,6 +772,134 @@ function MapPanel({
   )
 }
 
+function MetricTile({ value, label }: { value: number | string; label: string }) {
+  return (
+    <Paper className="mui-metric-tile" variant="outlined">
+      <Typography component="strong" variant="h5">{value}</Typography>
+      <Typography color="text.secondary" variant="body2">{label}</Typography>
+    </Paper>
+  )
+}
+
+function FilterSurface({
+  filters,
+  genres,
+  venueTypes,
+  priceBands,
+  onChange,
+}: {
+  filters: Filters
+  genres: string[]
+  venueTypes: string[]
+  priceBands: string[]
+  onChange: (filters: Filters) => void
+}) {
+  return (
+    <Paper className="mui-filter-surface" component="section" elevation={0} variant="outlined">
+      <Stack direction={{ md: 'row', xs: 'column' }} sx={{ alignItems: { md: 'center', xs: 'stretch' }, gap: 2, justifyContent: 'space-between', mb: 2 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2 }}>
+          <TuneRoundedIcon color="primary" />
+          <Box>
+            <Typography sx={{ fontWeight: 800 }}>Filter the night</Typography>
+            <Typography color="text.secondary" variant="body2">Sort by vibe, spend, timing, or what is near you</Typography>
+          </Box>
+        </Stack>
+        <FormControlLabel
+          control={<Switch checked={filters.open_now} onChange={() => onChange({ ...filters, open_now: !filters.open_now })} />}
+          label="Open now"
+        />
+      </Stack>
+      <Box className="mui-filter-grid">
+        <TextField
+          label="Date"
+          onChange={(event) => onChange({ ...filters, date: event.target.value })}
+          slotProps={{ inputLabel: { shrink: true } }}
+          type="date"
+          value={filters.date}
+        />
+        <FormControl>
+          <InputLabel>Genre</InputLabel>
+          <Select label="Genre" value={filters.genre} onChange={(event) => onChange({ ...filters, genre: event.target.value })}>
+            <MenuItem value="">Any genre</MenuItem>
+            {genres.map((genre) => <MenuItem key={genre} value={genre}>{genre}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl>
+          <InputLabel>Venue type</InputLabel>
+          <Select label="Venue type" value={filters.venue_type} onChange={(event) => onChange({ ...filters, venue_type: event.target.value })}>
+            <MenuItem value="">Any venue</MenuItem>
+            {venueTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl>
+          <InputLabel>Price band</InputLabel>
+          <Select label="Price band" value={filters.price_band} onChange={(event) => onChange({ ...filters, price_band: event.target.value })}>
+            <MenuItem value="">Any budget</MenuItem>
+            {priceBands.map((band) => <MenuItem key={band} value={band}>{band}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl>
+          <InputLabel>Sort by</InputLabel>
+          <Select label="Sort by" value={filters.sort} onChange={(event) => onChange({ ...filters, sort: event.target.value })}>
+            <MenuItem value="time">Next event / opening time</MenuItem>
+            <MenuItem value="name">Venue name</MenuItem>
+            <MenuItem value="price">Price</MenuItem>
+            <MenuItem value="area">Area</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+    </Paper>
+  )
+}
+
+function VenueCard({ venue, onOpen }: { venue: VenueWithDistance; onOpen: () => void }) {
+  return (
+    <Card className="mui-list-card" variant="outlined">
+      <CardActionArea onClick={onOpen}>
+        <CardContent>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
+            <Chip color="primary" label={venue.type} size="small" />
+            <Chip label={venue.area.name} size="small" variant="outlined" />
+            <Chip label={venue.price_band} size="small" variant="outlined" />
+          </Stack>
+          <Typography gutterBottom variant="h6">{venue.name}</Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }} variant="body2">{venue.description}</Typography>
+          <Box className="mui-card-facts">
+            <span><ScheduleRoundedIcon />{venue.opens_at} - {venue.closes_at}</span>
+            <span><PlaceRoundedIcon />{venue.address}</span>
+            <span><NightlifeRoundedIcon />{formatDateTime(venue.next_event_start)}</span>
+            <span><MyLocationRoundedIcon />{formatDistance(venue.distanceMiles)}</span>
+          </Box>
+        </CardContent>
+      </CardActionArea>
+    </Card>
+  )
+}
+
+function EventCard({ item, onOpen }: { item: EventWithDistance; onOpen: () => void }) {
+  return (
+    <Card className="mui-list-card event-card" variant="outlined">
+      <CardActionArea onClick={onOpen}>
+        <CardContent>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
+            <Chip color="secondary" label={item.genre} size="small" />
+            <Chip label={item.venue.name} size="small" variant="outlined" />
+            <Chip label={item.price_label} size="small" variant="outlined" />
+          </Stack>
+          <Typography gutterBottom variant="h6">{item.title}</Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }} variant="body2">{item.description}</Typography>
+          <Box className="mui-card-facts">
+            <span><ScheduleRoundedIcon />{formatDateTime(item.start_at)}</span>
+            <span><NightlifeRoundedIcon />{item.venue.opens_at} - {item.venue.closes_at}</span>
+            <span><PlaceRoundedIcon />{item.venue.area.name}</span>
+            <span><MyLocationRoundedIcon />{formatDistance(item.distanceMiles)}</span>
+          </Box>
+        </CardContent>
+      </CardActionArea>
+    </Card>
+  )
+}
+
 function HomePage() {
   const { theme, toggleTheme } = useTheme()
   const location = useCurrentLocation()
@@ -733,177 +964,116 @@ function HomePage() {
   }
 
   return (
-    <div className="nightlife-app">
-      <AppBackground />
-      <Header
-        theme={theme}
-        hasLocation={Boolean(location.coords)}
-        onToggleTheme={toggleTheme}
-        onUseLocation={location.requestLocation}
-      />
-      <section className="hero-shell hero-shell-rich">
-        <div className="hero-panel hero-copy hero-copy-rich">
-          <div className="hero-copy-content">
-            <p className="kicker">Town nightlife planner</p>
-            <h1>Find pubs, bars, clubs, and events in one simple view.</h1>
-            <p className="lede">
-              Search by town, filter what matters, and check venues, hours, prices, and events without jumping around.
-            </p>
-            <div className="hero-metrics">
-              <div><strong>{venuesWithDistance.length}</strong><span>venues matching now</span></div>
-              <div><strong>{allEventsWithDistance.length}</strong><span>events in the schedule</span></div>
-              <div><strong>{location.coords ? nearbyEvents.length : 0}</strong><span>nearby picks ready</span></div>
-            </div>
-            {spotlight ? (
-              <button
-                type="button"
-                className="spotlight-banner spotlight-button"
-                onClick={() => {
-                  setSelectedVenue(spotlight)
-                  setSelectedEvent(null)
-                }}
-              >
-                <span className="spotlight-label">Spotlight</span>
-                <div>
-                  <strong>{spotlight.name}</strong>
-                  <p>
-                    {spotlight.area.name} | {spotlight.opens_at} - {spotlight.closes_at} |{' '}
-                    {formatDistance(spotlight.distanceMiles)}
-                  </p>
-                </div>
-                <span className="cta-link">Open panel</span>
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <MapPanel
-          areas={areaData}
-          venues={venuesWithDistance}
-          events={allEventsWithDistance}
-          selectedArea={filters.area}
-          selectedEventId={selectedEvent?.id ?? null}
-          selectedVenueId={selectedVenue?.id ?? null}
-          userCoords={location.coords}
-          routeTarget={routeTarget}
-          onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
+    <UiThemeProvider mode={theme}>
+      <div className="nightlife-app">
+        <AppBackground />
+        <Header
+          theme={theme}
+          hasLocation={Boolean(location.coords)}
+          onToggleTheme={toggleTheme}
+          onUseLocation={location.requestLocation}
         />
-      </section>
-      <section className="filter-surface">
-        <div className="section-topline">
-          <span>Filter the night</span>
-          <small>Sort by vibe, spend, timing, or what is near you</small>
-        </div>
-        <div className="filter-grid">
-          <label>
-            Date
-            <input type="date" value={filters.date} onChange={(event) => setFilters({ ...filters, date: event.target.value })} />
-          </label>
-          <label>
-            Genre
-            <select value={filters.genre} onChange={(event) => setFilters({ ...filters, genre: event.target.value })}>
-              <option value="">Any genre</option>
-              {genres.map((genre) => <option key={genre} value={genre}>{genre}</option>)}
-            </select>
-          </label>
-          <label>
-            Venue type
-            <select value={filters.venue_type} onChange={(event) => setFilters({ ...filters, venue_type: event.target.value })}>
-              <option value="">Any venue</option>
-              {venueTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-            </select>
-          </label>
-          <label>
-            Price band
-            <select value={filters.price_band} onChange={(event) => setFilters({ ...filters, price_band: event.target.value })}>
-              <option value="">Any budget</option>
-              {priceBands.map((band) => <option key={band} value={band}>{band}</option>)}
-            </select>
-          </label>
-          <label>
-            Sort by
-            <select value={filters.sort} onChange={(event) => setFilters({ ...filters, sort: event.target.value })}>
-              <option value="time">Next event / opening time</option>
-              <option value="name">Venue name</option>
-              <option value="price">Price</option>
-              <option value="area">Area</option>
-            </select>
-          </label>
-          <label className="toggle-field">
-            <span>Open now</span>
-            <button className={classNames('toggle-pill', filters.open_now && 'active')} type="button" onClick={() => setFilters({ ...filters, open_now: !filters.open_now })}>
-              <span />
-            </button>
-          </label>
-        </div>
-      </section>
-      {areas.error || venues.error || events.error ? (
-        <section className="filter-surface">
-          <p className="error-note">Data load issue: {[areas.error, venues.error, events.error].filter(Boolean).join(' | ')}</p>
+        <section className="hero-shell hero-shell-rich">
+          <div className="hero-panel hero-copy hero-copy-rich">
+            <div className="hero-copy-content">
+              <p className="kicker">Town nightlife planner</p>
+              <h1>Find pubs, bars, clubs, and events in one simple view.</h1>
+              <p className="lede">
+                Search by town, filter what matters, and check venues, hours, prices, and events without jumping around.
+              </p>
+              <Box className="mui-hero-metrics">
+                <MetricTile label="venues matching" value={venuesWithDistance.length} />
+                <MetricTile label="events scheduled" value={allEventsWithDistance.length} />
+                <MetricTile label="nearby picks" value={location.coords ? nearbyEvents.length : 0} />
+              </Box>
+              {spotlight ? (
+                <button
+                  type="button"
+                  className="spotlight-banner spotlight-button"
+                  onClick={() => {
+                    setSelectedVenue(spotlight)
+                    setSelectedEvent(null)
+                  }}
+                >
+                  <span className="spotlight-label">Spotlight</span>
+                  <div>
+                    <strong>{spotlight.name}</strong>
+                    <p>
+                      {spotlight.area.name} | {spotlight.opens_at} - {spotlight.closes_at} |{' '}
+                      {formatDistance(spotlight.distanceMiles)}
+                    </p>
+                  </div>
+                  <span className="cta-link">Open panel</span>
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <MapPanel
+            areas={areaData}
+            venues={venuesWithDistance}
+            events={allEventsWithDistance}
+            selectedArea={filters.area}
+            selectedEventId={selectedEvent?.id ?? null}
+            selectedVenueId={selectedVenue?.id ?? null}
+            userCoords={location.coords}
+            routeTarget={routeTarget}
+            onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
+          />
         </section>
-      ) : null}
-      <section className="events-toolbar">
-        <div className="tab-group">
-          <button className={classNames('tab-button', activeTab === 'all' && 'active')} onClick={() => setActiveTab('all')}>All events</button>
-          <button className={classNames('tab-button', activeTab === 'nearby' && 'active')} onClick={() => { setActiveTab('nearby'); if (!location.coords) location.requestLocation() }}>Events close by</button>
-        </div>
-        <div className="nearby-state">
-          {location.coords ? <span>Nearby results use your current location.</span> : <span>{location.error ?? 'Enable location to show exact distance from you.'}</span>}
-        </div>
-      </section>
-      <section className="listing-grid">
-        <div className="listing-column">
-          <div className="section-headline"><h2>Venues in view</h2><p>Tap any venue card to open details in a side panel.</p></div>
-          {venues.loading ? <p className="empty-message">Loading venues...</p> : null}
-          {!venues.loading && !venueData.length ? <p className="empty-message">No venues match the current filters.</p> : null}
-          <div className="card-stack">
-            {venuesWithDistance.map((venue) => (
-              <button key={venue.id} type="button" className="venue-tile tile-button" onClick={() => { setSelectedVenue(venue); setSelectedEvent(null) }}>
-                <div className="tile-accent tile-accent-venue" />
-                <div className="tile-topline"><span>{venue.type}</span><span>{venue.area.name}</span><span>{venue.price_band}</span></div>
-                <h3>{venue.name}</h3>
-                <p>{venue.description}</p>
-                <dl className="data-points">
-                  <div><dt>Hours</dt><dd>{venue.opens_at} - {venue.closes_at}</dd></div>
-                  <div><dt>Address</dt><dd>{venue.address}</dd></div>
-                  <div><dt>Next event</dt><dd>{formatDateTime(venue.next_event_start)}</dd></div>
-                  <div><dt>Distance</dt><dd>{formatDistance(venue.distanceMiles)}</dd></div>
-                  <div><dt>Freshness</dt><dd>{venue.source.status} | {Math.round(venue.source.confidence * 100)}%</dd></div>
-                </dl>
-              </button>
-            ))}
+        <FilterSurface filters={filters} genres={genres} priceBands={priceBands} venueTypes={venueTypes} onChange={setFilters} />
+        {areas.error || venues.error || events.error ? (
+          <section className="filter-surface">
+            <p className="error-note">Data load issue: {[areas.error, venues.error, events.error].filter(Boolean).join(' | ')}</p>
+          </section>
+        ) : null}
+        <Paper className="mui-events-toolbar" component="section" elevation={0} variant="outlined">
+          <ToggleButtonGroup
+            exclusive
+            onChange={(_, value: 'all' | 'nearby' | null) => {
+              if (!value) return
+              setActiveTab(value)
+              if (value === 'nearby' && !location.coords) location.requestLocation()
+            }}
+            value={activeTab}
+          >
+            <ToggleButton value="all">All events</ToggleButton>
+            <ToggleButton value="nearby">Events close by</ToggleButton>
+          </ToggleButtonGroup>
+          <Typography color="text.secondary" variant="body2">
+            {location.coords ? 'Nearby results use your current location.' : location.error ?? 'Enable location to show exact distance from you.'}
+          </Typography>
+        </Paper>
+        <section className="listing-grid">
+          <div className="listing-column">
+            <div className="section-headline"><h2>Venues in view</h2><p>Tap any venue card to open details in a side panel.</p></div>
+            {venues.loading ? <p className="empty-message">Loading venues...</p> : null}
+            {!venues.loading && !venueData.length ? <p className="empty-message">No venues match the current filters.</p> : null}
+            <div className="card-stack">
+              {venuesWithDistance.map((venue) => (
+                <VenueCard key={venue.id} venue={venue} onOpen={() => { setSelectedVenue(venue); setSelectedEvent(null) }} />
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="listing-column">
-          <div className="section-headline"><h2>{activeTab === 'nearby' ? 'Events close by' : 'Upcoming events'}</h2><p>Tap any event card to open a richer side panel instead of another page.</p></div>
-          {events.loading ? <p className="empty-message">Loading events...</p> : null}
-          {!events.loading && !displayedEvents.length ? <p className="empty-message">No events match the current filters.</p> : null}
-          <div className="card-stack">
-            {displayedEvents.map((item) => (
-              <button key={item.id} type="button" className="event-tile tile-button" onClick={() => { setSelectedEvent(item); setSelectedVenue(null) }}>
-                <div className="tile-accent tile-accent-event" />
-                <div className="tile-topline"><span>{item.genre}</span><span>{item.venue.name}</span><span>{item.price_label}</span></div>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-                <dl className="data-points">
-                  <div><dt>Starts</dt><dd>{formatDateTime(item.start_at)}</dd></div>
-                  <div><dt>Venue hours</dt><dd>{item.venue.opens_at} - {item.venue.closes_at}</dd></div>
-                  <div><dt>Area</dt><dd>{item.venue.area.name}</dd></div>
-                  <div><dt>Distance</dt><dd>{formatDistance(item.distanceMiles)}</dd></div>
-                  <div><dt>Source</dt><dd>{item.source.status} | {formatDateTime(item.source.last_verified_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</dd></div>
-                </dl>
-              </button>
-            ))}
+          <div className="listing-column">
+            <div className="section-headline"><h2>{activeTab === 'nearby' ? 'Events close by' : 'Upcoming events'}</h2><p>Tap any event card to open a richer side panel instead of another page.</p></div>
+            {events.loading ? <p className="empty-message">Loading events...</p> : null}
+            {!events.loading && !displayedEvents.length ? <p className="empty-message">No events match the current filters.</p> : null}
+            <div className="card-stack">
+              {displayedEvents.map((item) => (
+                <EventCard key={item.id} item={item} onOpen={() => { setSelectedEvent(item); setSelectedVenue(null) }} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-      <SidePanel
-        selectedEvent={selectedEvent}
-        selectedVenue={selectedVenue}
-        hasLocation={Boolean(location.coords)}
-        onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
-        onShowEventRoute={showEventRouteInMap}
-      />
-    </div>
+        </section>
+        <SidePanel
+          selectedEvent={selectedEvent}
+          selectedVenue={selectedVenue}
+          hasLocation={Boolean(location.coords)}
+          onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
+          onShowEventRoute={showEventRouteInMap}
+        />
+      </div>
+    </UiThemeProvider>
   )
 }
 
@@ -933,14 +1103,15 @@ function VenuePage({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="nightlife-app">
-      <AppBackground />
-      <Header theme={theme} hasLocation={Boolean(location.coords)} onToggleTheme={toggleTheme} onUseLocation={location.requestLocation} />
-      <a className="back-link" href="/">Back to town view</a>
-      {loading ? <p className="empty-message">Loading venue...</p> : null}
-      {error ? <p className="empty-message">{error}</p> : null}
-      {data ? (
-        <>
+    <UiThemeProvider mode={theme}>
+      <div className="nightlife-app">
+        <AppBackground />
+        <Header theme={theme} hasLocation={Boolean(location.coords)} onToggleTheme={toggleTheme} onUseLocation={location.requestLocation} />
+        <a className="back-link" href="/">Back to town view</a>
+        {loading ? <p className="empty-message">Loading venue...</p> : null}
+        {error ? <p className="empty-message">{error}</p> : null}
+        {data ? (
+          <>
           <section className="venue-hero venue-hero-rich">
             <div className="hero-panel venue-main">
               <p className="kicker">{data.type} | {data.area.name}</p>
@@ -987,9 +1158,10 @@ function VenuePage({ slug }: { slug: string }) {
             {claimState.message ? <p className="success-note">{claimState.message}</p> : null}
             {claimState.error ? <p className="error-note">{claimState.error}</p> : null}
           </section>
-        </>
-      ) : null}
-    </div>
+          </>
+        ) : null}
+      </div>
+    </UiThemeProvider>
   )
 }
 
@@ -999,26 +1171,28 @@ function EventPage({ eventId }: { eventId: number }) {
   const { data, loading, error } = useEventDetail(eventId)
 
   return (
-    <div className="nightlife-app">
-      <AppBackground />
-      <Header theme={theme} hasLocation={Boolean(location.coords)} onToggleTheme={toggleTheme} onUseLocation={location.requestLocation} />
-      <a className="back-link" href="/">Back to town view</a>
-      {loading ? <p className="empty-message">Loading event...</p> : null}
-      {error ? <p className="empty-message">{error}</p> : null}
-      {data ? (
-        <section className="event-detail-grid">
-          <div className="spotlight-card">
-            <div className="section-headline"><h2>{data.title}</h2><p>{data.description}</p></div>
-            <dl className="data-points">
-              <div><dt>Starts</dt><dd>{formatDateTime(data.start_at)}</dd></div>
-              <div><dt>Ends</dt><dd>{formatDateTime(data.end_at, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</dd></div>
-              <div><dt>Venue</dt><dd>{data.venue.name}</dd></div>
-              <div><dt>Directions</dt><dd><a className="inline-route" href={mapsUrl(data.venue.coordinates)} target="_blank" rel="noreferrer">Open route</a></dd></div>
-            </dl>
-          </div>
-        </section>
-      ) : null}
-    </div>
+    <UiThemeProvider mode={theme}>
+      <div className="nightlife-app">
+        <AppBackground />
+        <Header theme={theme} hasLocation={Boolean(location.coords)} onToggleTheme={toggleTheme} onUseLocation={location.requestLocation} />
+        <a className="back-link" href="/">Back to town view</a>
+        {loading ? <p className="empty-message">Loading event...</p> : null}
+        {error ? <p className="empty-message">{error}</p> : null}
+        {data ? (
+          <section className="event-detail-grid">
+            <div className="spotlight-card">
+              <div className="section-headline"><h2>{data.title}</h2><p>{data.description}</p></div>
+              <dl className="data-points">
+                <div><dt>Starts</dt><dd>{formatDateTime(data.start_at)}</dd></div>
+                <div><dt>Ends</dt><dd>{formatDateTime(data.end_at, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</dd></div>
+                <div><dt>Venue</dt><dd>{data.venue.name}</dd></div>
+                <div><dt>Directions</dt><dd><a className="inline-route" href={mapsUrl(data.venue.coordinates)} target="_blank" rel="noreferrer">Open route</a></dd></div>
+              </dl>
+            </div>
+          </section>
+        ) : null}
+      </div>
+    </UiThemeProvider>
   )
 }
 
