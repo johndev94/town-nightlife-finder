@@ -1046,8 +1046,17 @@ function HomePage() {
           </Typography>
         </Paper>
         <section className="listing-grid">
-          <div className="listing-column">
-            <div className="section-headline"><h2>Venues in view</h2><p>Tap any venue card to open details in a side panel.</p></div>
+          <div className="listing-column listing-column-venues">
+            <div className="section-headline section-headline-venues">
+              <div className="section-title-row">
+                <div>
+                  <p className="section-kicker">Places</p>
+                  <h2>Bars and venues</h2>
+                </div>
+                <span className="section-count">{venuesWithDistance.length}</span>
+              </div>
+              <p>Browse the places first, then open any venue for hours, pricing, and details.</p>
+            </div>
             {venues.loading ? <p className="empty-message">Loading venues...</p> : null}
             {!venues.loading && !venueData.length ? <p className="empty-message">No venues match the current filters.</p> : null}
             <div className="card-stack">
@@ -1056,8 +1065,17 @@ function HomePage() {
               ))}
             </div>
           </div>
-          <div className="listing-column">
-            <div className="section-headline"><h2>{activeTab === 'nearby' ? 'Events close by' : 'Upcoming events'}</h2><p>Tap any event card to open a richer side panel instead of another page.</p></div>
+          <div className="listing-column listing-column-events">
+            <div className="section-headline section-headline-events">
+              <div className="section-title-row">
+                <div>
+                  <p className="section-kicker">What's on</p>
+                  <h2>{activeTab === 'nearby' ? 'Events close by' : 'Upcoming events'}</h2>
+                </div>
+                <span className="section-count">{displayedEvents.length}</span>
+              </div>
+              <p>See tonight's sessions, gigs, karaoke, and club nights separately from the venue list.</p>
+            </div>
             {events.loading ? <p className="empty-message">Loading events...</p> : null}
             {!events.loading && !displayedEvents.length ? <p className="empty-message">No events match the current filters.</p> : null}
             <div className="card-stack">

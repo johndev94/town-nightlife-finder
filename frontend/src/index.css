@@ -916,6 +916,34 @@ body[data-theme="light"] .toggle-pill span {
   margin-top: 18px;
 }
 
+.listing-column {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.listing-column-venues,
+.listing-column-events {
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+body[data-theme="dark"] .listing-column-venues,
+body[data-theme="dark"] .listing-column-events {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.listing-column-venues {
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.08);
+}
+
+.listing-column-events {
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+}
+
 .pill-row, .social-strip, .social-row, .hero-pills, .card-topline, .tile-topline, .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -972,6 +1000,59 @@ button.inline-route {
 .section-headline h2, .panel h2, .map-card h2 {
   margin: 0 0 6px;
   font-size: 1.45rem;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-kicker {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.section-headline-venues .section-kicker {
+  color: var(--accent);
+}
+
+.section-headline-events .section-kicker {
+  color: var(--accent-2);
+}
+
+.section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ink);
+  font-weight: 800;
+  line-height: 1;
+}
+
+body[data-theme="dark"] .section-count {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.section-headline-venues,
+.section-headline-events {
+  margin-bottom: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-headline-venues h2,
+.section-headline-events h2 {
+  margin-bottom: 0;
 }
 
 .venue-tile, .event-tile {
