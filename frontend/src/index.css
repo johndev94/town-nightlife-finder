@@ -1865,8 +1865,16 @@ body[data-theme="dark"] .real-map-board {
   fill: rgba(8, 15, 31, 0.88);
 }
 
-.event-pin-note {
-  fill: #fff9ef;
+.event-pin-star {
+  fill: url("#eventSparkGlow");
+}
+
+.event-pin-ticket {
+  fill: none;
+  stroke: #fff9ef;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .event-leaflet-marker:hover .event-marker-svg,

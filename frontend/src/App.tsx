@@ -59,15 +59,20 @@ const EVENT_MARKER_SVG = `
   <svg class="event-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="eventPinGlow" x1="10%" x2="90%" y1="0%" y2="100%">
-        <stop offset="0%" stop-color="#ff7a29" />
-        <stop offset="54%" stop-color="#f4c95d" />
-        <stop offset="100%" stop-color="#32c3ff" />
+        <stop offset="0%" stop-color="#ec4899" />
+        <stop offset="54%" stop-color="#8b5cf6" />
+        <stop offset="100%" stop-color="#2563eb" />
+      </linearGradient>
+      <linearGradient id="eventSparkGlow" x1="0%" x2="100%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#fff4fb" />
+        <stop offset="100%" stop-color="#fefce8" />
       </linearGradient>
     </defs>
     <path class="event-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
     <path class="event-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
     <circle class="event-pin-inner" cx="32" cy="29" r="15" />
-    <path class="event-pin-note" d="M37 18v20.5a5.5 5.5 0 1 1-3-4.9V23l-12 3v14.5a5.5 5.5 0 1 1-3-4.9V23.7L37 18Z" />
+    <path class="event-pin-star" d="m32 15.8 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-2.9-5.6 2.9 1.1-6.3-4.6-4.5 6.3-.9 2.8-5.7Z" />
+    <path class="event-pin-ticket" d="M24 35.5h16c.8 0 1.5.7 1.5 1.5v2.2c-1.1.2-1.9 1.1-1.9 2.3s.8 2.1 1.9 2.3V46c0 .8-.7 1.5-1.5 1.5H24c-.8 0-1.5-.7-1.5-1.5v-2.2c1.1-.2 1.9-1.1 1.9-2.3s-.8-2.1-1.9-2.3V37c0-.8.7-1.5 1.5-1.5Zm6 2.3v7.4m4-7.4v7.4" />
   </svg>
 `
 
