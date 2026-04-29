@@ -855,13 +855,13 @@ function FilterSurface({
 
 function VenueCard({ venue, onOpen }: { venue: VenueWithDistance; onOpen: () => void }) {
   return (
-    <Card className="mui-list-card" variant="outlined">
+    <Card className="mui-list-card venue-list-card" variant="outlined">
       <CardActionArea onClick={onOpen}>
         <CardContent>
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
-            <Chip color="primary" label={venue.type} size="small" />
-            <Chip label={venue.area.name} size="small" variant="outlined" />
-            <Chip label={venue.price_band} size="small" variant="outlined" />
+            <Chip className="card-chip card-chip-solid" color="primary" label={venue.type} size="small" />
+            <Chip className="card-chip" label={venue.area.name} size="small" variant="outlined" />
+            <Chip className="card-chip" label={venue.price_band} size="small" variant="outlined" />
           </Stack>
           <Typography gutterBottom variant="h6">{venue.name}</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }} variant="body2">{venue.description}</Typography>
@@ -883,9 +883,9 @@ function EventCard({ item, onOpen }: { item: EventWithDistance; onOpen: () => vo
       <CardActionArea onClick={onOpen}>
         <CardContent>
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
-            <Chip color="secondary" label={item.genre} size="small" />
-            <Chip label={item.venue.name} size="small" variant="outlined" />
-            <Chip label={item.price_label} size="small" variant="outlined" />
+            <Chip className="card-chip card-chip-solid" color="secondary" label={item.genre} size="small" />
+            <Chip className="card-chip" label={item.venue.name} size="small" variant="outlined" />
+            <Chip className="card-chip" label={item.price_label} size="small" variant="outlined" />
           </Stack>
           <Typography gutterBottom variant="h6">{item.title}</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }} variant="body2">{item.description}</Typography>

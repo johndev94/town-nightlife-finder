@@ -10,8 +10,10 @@ from app.google_places import (
     address_contains_required_location,
     apply_correction,
     apply_manual_location,
+    build_venue_queries,
     candidate_from_place,
     ensure_google_place_columns,
+    find_best_candidate,
 )
 
 
@@ -39,16 +41,68 @@ class GooglePlacesCorrectionTestCase(unittest.TestCase):
             "businessStatus": "OPERATIONAL",
         }
 
-        candidate = candidate_from_place(venue, place)
+        candidate = candidate_from_place(venue, place, "Bar Square Ballina, Ballina, Ireland")
 
         self.assertIsNotNone(candidate)
         self.assertEqual(candidate.place_id, "google-place-123")
         self.assertEqual(candidate.latitude, 54.11495)
         self.assertGreater(candidate.score, 0.5)
+        self.assertEqual(candidate.matched_query, "Bar Square Ballina, Ballina, Ireland")
 
     def test_required_location_rejects_wrong_town(self):
         self.assertTrue(address_contains_required_location("Garden Street, Ballina, Co. Mayo, Ireland", "Ballina Town"))
         self.assertFalse(address_contains_required_location("Main Street, Dublin, Ireland", "Ballina Town"))
+
+    def test_build_venue_queries_creates_fallback_queries(self):
+        venue = {
+            "name": "Bar Square Ballina",
+            "address": "Garden Street, Ballina, Co. Mayo, Ireland",
+            "area_name": "Ballina Town",
+        }
+
+        queries = build_venue_queries(venue)
+
+        self.assertIn("Bar Square Ballina, Ballina, Co. Mayo, Ireland", queries)
+        self.assertIn("Bar Square Ballina, Ballina, Ireland", queries)
+        self.assertEqual(queries[-1], "Bar Square Ballina")
+
+    def test_find_best_candidate_tries_fallback_queries(self):
+        class FakeClient:
+            def __init__(self) -> None:
+                self.queries: list[str] = []
+
+            def search_text(self, query: str) -> list[dict[str, object]]:
+                self.queries.append(query)
+                if query == "Bar Square Ballina, Ballina, Ireland":
+                    return [
+                        {
+                            "id": "google-place-123",
+                            "displayName": {"text": "Bar Square"},
+                            "formattedAddress": "Garden Street, Ballina, Co. Mayo, Ireland",
+                            "location": {"latitude": 54.11495, "longitude": -9.15387},
+                            "googleMapsUri": "https://maps.google.com/?cid=123",
+                            "businessStatus": "OPERATIONAL",
+                        }
+                    ]
+                return []
+
+        venue = {
+            "id": 99,
+            "name": "Bar Square Ballina",
+            "slug": "bar-square-ballina",
+            "address": "Garden Street, Ballina, Co. Mayo, Ireland",
+            "latitude": 54.114658,
+            "longitude": -9.157807,
+            "area_name": "Ballina Town",
+        }
+
+        client = FakeClient()
+        correction = find_best_candidate(client, venue)
+
+        self.assertIsNotNone(correction.candidate)
+        self.assertEqual(correction.candidate.place_id, "google-place-123")
+        self.assertEqual(correction.query, "Bar Square Ballina, Ballina, Ireland")
+        self.assertGreater(len(client.queries), 1)
 
     def test_apply_correction_updates_venue_and_source(self):
         db = get_db()
@@ -71,6 +125,7 @@ class GooglePlacesCorrectionTestCase(unittest.TestCase):
                 google_maps_uri="https://maps.google.com/?cid=456",
                 business_status="OPERATIONAL",
                 score=0.91,
+                matched_query="The Lantern Arms, 12 Market Row",
             ),
         )
 

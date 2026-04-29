@@ -29,6 +29,29 @@ def normalise_text(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
+def dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        cleaned = value.strip().strip(",")
+        if not cleaned:
+            continue
+        key = normalise_text(cleaned)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(cleaned)
+    return ordered
+
+
+def compose_query(*parts: str | None) -> str:
+    pieces = dedupe_strings([part or "" for part in parts])
+    joined = ", ".join(pieces)
+    if joined and "ireland" not in normalise_text(joined):
+        joined = f"{joined}, Ireland"
+    return joined
+
+
 @dataclass(frozen=True)
 class VenueCandidate:
     place_id: str
@@ -39,6 +62,7 @@ class VenueCandidate:
     google_maps_uri: str | None
     business_status: str | None
     score: float
+    matched_query: str
 
 
 @dataclass(frozen=True)
@@ -94,36 +118,69 @@ class GooglePlacesClient:
         return payload.get("places", [])
 
 
-def build_venue_query(venue: Any) -> str:
-    pieces = [
-        venue["name"],
-        venue["address"],
-        venue["area_name"],
+def area_town_name(area_name: str) -> str:
+    return re.sub(r"\btown\b", "", area_name, flags=re.IGNORECASE).strip(" ,")
+
+
+def county_from_address(address: str) -> str | None:
+    match = re.search(r"\b(?:co\.?\s+)?([A-Z][a-z]+)\b(?=,\s*Ireland|\s*,?\s*Ireland|$)", address)
+    if not match:
+        return None
+    county = match.group(1).strip()
+    if county.lower() in {"ireland", "road", "street"}:
+        return None
+    return f"Co. {county}" if not county.lower().startswith("co") else county
+
+
+def build_venue_queries(venue: Any) -> list[str]:
+    name = (venue["name"] or "").strip()
+    address = (venue["address"] or "").strip()
+    area_name = (venue["area_name"] or "").strip()
+    town_name = area_town_name(area_name)
+    county = county_from_address(address)
+    if county is None and "mayo" in normalise_text(address):
+        county = "Co. Mayo"
+
+    candidate_queries = [
+        compose_query(name, address),
+        compose_query(name, town_name, county),
+        compose_query(name, town_name),
+        compose_query(name, county),
+        name,
     ]
-    if "Ireland" not in " ".join(pieces):
-        pieces.append("Ireland")
-    return ", ".join(piece for piece in pieces if piece)
+    return dedupe_strings(candidate_queries)
 
 
 def address_contains_required_location(address: str, area_name: str) -> bool:
     normalised_address = normalise_text(address)
-    town = normalise_text(area_name).replace(" town", "").strip()
+    town = normalise_text(area_town_name(area_name))
     has_town = bool(town and town in normalised_address)
     has_ireland = "ireland" in normalised_address or " ie" in f" {normalised_address} "
-    has_mayo = "mayo" in normalised_address if town == "ballina" else True
-    return has_town and has_ireland and has_mayo
+    has_county = bool(re.search(r"\bco\s+[a-z]+\b", normalised_address))
+    return has_town and (has_ireland or has_county)
+
+
+def token_overlap_score(left: str, right: str) -> float:
+    left_tokens = set(normalise_text(left).split())
+    right_tokens = set(normalise_text(right).split())
+    if not left_tokens or not right_tokens:
+        return 0.0
+    overlap = len(left_tokens & right_tokens)
+    return overlap / max(len(left_tokens), len(right_tokens))
 
 
 def score_place(venue_name: str, area_name: str, place: dict[str, Any]) -> float:
     display_name = (place.get("displayName") or {}).get("text") or ""
     address = place.get("formattedAddress") or ""
-    name_score = SequenceMatcher(None, normalise_text(venue_name), normalise_text(display_name)).ratio()
+    sequence_score = SequenceMatcher(None, normalise_text(venue_name), normalise_text(display_name)).ratio()
+    overlap_score = token_overlap_score(venue_name, display_name)
+    name_score = max(sequence_score, overlap_score)
     location_score = 0.24 if address_contains_required_location(address, area_name) else -0.45
     open_score = 0.08 if place.get("businessStatus") != "CLOSED_PERMANENTLY" else -0.35
     return round(min(1.0, max(0.0, name_score + location_score + open_score)), 3)
 
 
-def candidate_from_place(venue: Any, place: dict[str, Any]) -> VenueCandidate | None:
+def candidate_from_place(venue: Any, place: dict[str, Any], matched_query: str) -> VenueCandidate | None:
     location = place.get("location") or {}
     latitude = location.get("latitude")
     longitude = location.get("longitude")
@@ -139,33 +196,36 @@ def candidate_from_place(venue: Any, place: dict[str, Any]) -> VenueCandidate | 
         google_maps_uri=place.get("googleMapsUri"),
         business_status=place.get("businessStatus"),
         score=score_place(venue["name"], venue["area_name"], place),
+        matched_query=matched_query,
     )
 
 
 def find_best_candidate(client: GooglePlacesClient, venue: Any) -> VenueCorrection:
-    query = build_venue_query(venue)
-    try:
-        places = client.search_text(query)
-    except requests.RequestException as exc:
-        return VenueCorrection(
-            venue_id=venue["id"],
-            venue_name=venue["name"],
-            slug=venue["slug"],
-            current_address=venue["address"],
-            current_latitude=venue["latitude"],
-            current_longitude=venue["longitude"],
-            candidate=None,
-            query=query,
-            error=str(exc),
-        )
+    queries = build_venue_queries(venue)
+    collected: dict[str, VenueCandidate] = {}
+    last_error: str | None = None
+    had_successful_request = False
 
-    candidates = [
-        candidate
-        for place in places
-        if address_contains_required_location(place.get("formattedAddress") or "", venue["area_name"])
-        if (candidate := candidate_from_place(venue, place))
-    ]
-    best = max(candidates, key=lambda candidate: candidate.score, default=None)
+    for query in queries:
+        try:
+            places = client.search_text(query)
+        except requests.RequestException as exc:
+            last_error = str(exc)
+            continue
+        had_successful_request = True
+
+        for place in places:
+            address = place.get("formattedAddress") or ""
+            if not address_contains_required_location(address, venue["area_name"]):
+                continue
+            candidate = candidate_from_place(venue, place, query)
+            if candidate is None:
+                continue
+            current = collected.get(candidate.place_id)
+            if current is None or candidate.score > current.score:
+                collected[candidate.place_id] = candidate
+
+    best = max(collected.values(), key=lambda candidate: candidate.score, default=None)
     return VenueCorrection(
         venue_id=venue["id"],
         venue_name=venue["name"],
@@ -174,7 +234,8 @@ def find_best_candidate(client: GooglePlacesClient, venue: Any) -> VenueCorrecti
         current_latitude=venue["latitude"],
         current_longitude=venue["longitude"],
         candidate=best,
-        query=query,
+        query=best.matched_query if best else queries[0],
+        error=last_error if best is None and not had_successful_request and last_error else None,
     )
 
 
