@@ -11,6 +11,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY="dev-secret-key",
         DATABASE=str(Path(app.root_path).parent / "nightlife.db"),
+        OSRM_BASE_URL="https://router.project-osrm.org",
     )
 
     if test_config:

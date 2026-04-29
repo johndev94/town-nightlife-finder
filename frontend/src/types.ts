@@ -9,6 +9,14 @@ export type Area = {
 
 export type Coords = { lat: number; lng: number }
 export type Theme = 'dark' | 'light'
+export type RoutePoint = { lat: number; lng: number }
+export type RouteResponse = {
+  distance_meters: number
+  duration_seconds: number
+  geometry: RoutePoint[]
+  mode: string
+  provider: string
+}
 
 export type Venue = {
   id: number

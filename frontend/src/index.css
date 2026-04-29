@@ -1704,6 +1704,18 @@ code {
   background: linear-gradient(135deg, #ff7a29, #2563eb);
 }
 
+.map-route-note {
+  position: relative;
+  z-index: 3;
+  margin: -2px 0 14px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.map-route-note.route-error {
+  color: var(--danger);
+}
+
 .map-search-results {
   position: relative;
   z-index: 4;
@@ -2011,6 +2023,10 @@ body[data-theme="light"] .nightlife-leaflet-popup .leaflet-popup-tip {
 .simple-route-line {
   filter: drop-shadow(0 0 8px rgba(50, 195, 255, 0.52));
   animation: routeDash 1.8s linear infinite;
+}
+
+.osrm-route-line {
+  filter: drop-shadow(0 0 8px rgba(50, 195, 255, 0.48));
 }
 
 .user-avatar-marker {

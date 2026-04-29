@@ -38,9 +38,9 @@ import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 
-import { initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
+import { fetchRoute, initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
-import type { Area, Coords, EventWithDistance, Filters, Theme, VenueWithDistance } from './types'
+import type { Area, Coords, EventWithDistance, Filters, RouteResponse, Theme, VenueWithDistance } from './types'
 
 type TownSearchResult = {
   place_id: number
@@ -425,6 +425,7 @@ function MapPanel({
   selectedVenueId,
   userCoords,
   routeTarget,
+  onRequestRoute,
   onSelectArea,
 }: {
   areas: Area[]
@@ -435,6 +436,7 @@ function MapPanel({
   selectedVenueId: number | null
   userCoords: Coords | null
   routeTarget: RouteTarget | null
+  onRequestRoute: (target: RouteTarget) => void
   onSelectArea: (slug: string) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
@@ -443,6 +445,12 @@ function MapPanel({
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const hasFittedInitialMarkers = useRef(false)
   const [mapViewMode, setMapViewMode] = useState<'all' | 'pubs' | 'events'>('all')
+  const [routeState, setRouteState] = useState<{
+    loading: boolean
+    error: string | null
+    route: RouteResponse | null
+    targetLabel: string | null
+  }>({ loading: false, error: null, route: null, targetLabel: null })
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
   const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
@@ -526,7 +534,7 @@ function MapPanel({
       inAppRoute.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        drawSimpleRoute({
+        onRequestRoute({
           coordinates: venue.coordinates,
           label: venue.name,
           detail: venue.address,
@@ -542,52 +550,13 @@ function MapPanel({
 
       if (userCoords) {
         const routeHint = document.createElement('small')
-        const miles = distanceMiles(userCoords, venue.coordinates)
-        const walkingMinutes = Math.max(1, Math.round(miles * 20))
-        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        routeHint.textContent = 'Show route on map for walking directions that follow roads.'
         popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
         return popup
       }
 
       popup.append(kicker, title, meta, inAppRoute, directions)
       return popup
-    }
-
-    const drawSimpleRoute = (target: RouteTarget) => {
-      if (!userCoords || !routeLayerRef.current) return
-
-      const start = L.latLng(userCoords.lat, userCoords.lng)
-      const destination = L.latLng(target.coordinates.lat, target.coordinates.lng)
-
-      routeLayerRef.current.clearLayers()
-      L.polyline([start, destination], {
-        className: 'simple-route-line',
-        color: '#32c3ff',
-        weight: 5,
-        opacity: 0.92,
-        dashArray: '10 12',
-        lineCap: 'round',
-      }).addTo(routeLayerRef.current)
-
-      L.circleMarker(start, {
-        className: 'simple-route-start',
-        radius: 8,
-        color: '#fff9ef',
-        fillColor: '#32c3ff',
-        fillOpacity: 1,
-        weight: 3,
-      }).addTo(routeLayerRef.current)
-
-      L.circleMarker(destination, {
-        className: 'simple-route-finish',
-        radius: 9,
-        color: '#fff9ef',
-        fillColor: '#ff7a29',
-        fillOpacity: 1,
-        weight: 3,
-      }).addTo(routeLayerRef.current)
-
-      map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
     }
 
     const eventPopup = (item: EventWithDistance) => {
@@ -623,7 +592,7 @@ function MapPanel({
       inAppRoute.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        drawSimpleRoute({
+        onRequestRoute({
           coordinates: item.venue.coordinates,
           label: item.title,
           detail: item.venue.name,
@@ -633,9 +602,7 @@ function MapPanel({
 
       if (userCoords) {
         const routeHint = document.createElement('small')
-        const miles = distanceMiles(userCoords, item.venue.coordinates)
-        const walkingMinutes = Math.max(1, Math.round(miles * 20))
-        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        routeHint.textContent = 'Show route on map for walking directions that follow roads.'
         popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
         return popup
       }
@@ -711,47 +678,74 @@ function MapPanel({
       map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
       hasFittedInitialMarkers.current = true
     }
-  }, [events, mapViewMode, selectedEventId, selectedVenueId, userCoords, venues])
+  }, [events, mapViewMode, onRequestRoute, selectedEventId, selectedVenueId, userCoords, venues])
 
   useEffect(() => {
     const map = mapRef.current
     const routeLayer = routeLayerRef.current
     if (!map || !routeLayer) return
-
+    let active = true
     routeLayer.clearLayers()
-    if (!routeTarget || !userCoords) return
+    if (!routeTarget || !userCoords) {
+      setRouteState({ loading: false, error: null, route: null, targetLabel: null })
+      return () => {
+        active = false
+      }
+    }
 
     const start = L.latLng(userCoords.lat, userCoords.lng)
     const destination = L.latLng(routeTarget.coordinates.lat, routeTarget.coordinates.lng)
+    setRouteState({ loading: true, error: null, route: null, targetLabel: routeTarget.label })
 
-    L.polyline([start, destination], {
-      className: 'simple-route-line',
-      color: '#32c3ff',
-      weight: 5,
-      opacity: 0.92,
-      dashArray: '10 12',
-      lineCap: 'round',
-    }).addTo(routeLayer)
+    fetchRoute(userCoords, routeTarget.coordinates, 'walking')
+      .then((route) => {
+        if (!active) return
+        const routePoints = route.geometry.map((point) => L.latLng(point.lat, point.lng))
+        if (!routePoints.length) throw new Error('No route geometry returned.')
 
-    L.circleMarker(start, {
-      className: 'simple-route-start',
-      radius: 8,
-      color: '#fff9ef',
-      fillColor: '#32c3ff',
-      fillOpacity: 1,
-      weight: 3,
-    }).addTo(routeLayer)
+        L.polyline(routePoints, {
+          className: 'osrm-route-line',
+          color: '#32c3ff',
+          weight: 6,
+          opacity: 0.96,
+          lineCap: 'round',
+        }).addTo(routeLayer)
 
-    L.circleMarker(destination, {
-      className: 'simple-route-finish',
-      radius: 9,
-      color: '#fff9ef',
-      fillColor: '#ff7a29',
-      fillOpacity: 1,
-      weight: 3,
-    }).addTo(routeLayer)
+        L.circleMarker(start, {
+          className: 'simple-route-start',
+          radius: 8,
+          color: '#fff9ef',
+          fillColor: '#32c3ff',
+          fillOpacity: 1,
+          weight: 3,
+        }).addTo(routeLayer)
 
-    map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+        L.circleMarker(destination, {
+          className: 'simple-route-finish',
+          radius: 9,
+          color: '#fff9ef',
+          fillColor: '#ff7a29',
+          fillOpacity: 1,
+          weight: 3,
+        }).addTo(routeLayer)
+
+        map.fitBounds(L.latLngBounds(routePoints).pad(0.18), { maxZoom: 17 })
+        setRouteState({ loading: false, error: null, route, targetLabel: routeTarget.label })
+      })
+      .catch((error: Error) => {
+        if (!active) return
+        routeLayer.clearLayers()
+        setRouteState({
+          loading: false,
+          error: error.message || 'Could not load directions right now.',
+          route: null,
+          targetLabel: routeTarget.label,
+        })
+      })
+
+    return () => {
+      active = false
+    }
   }, [routeTarget, userCoords])
 
   useEffect(() => {
@@ -838,6 +832,15 @@ function MapPanel({
           <span className="map-legend-item"><span className="map-legend-dot event-dot" />Events</span>
         </div>
       </div>
+
+      {routeState.loading ? <p className="map-route-note">Finding walking route to {routeState.targetLabel}...</p> : null}
+      {routeState.error ? <p className="map-route-note route-error">{routeState.error}</p> : null}
+      {routeState.route && !routeState.loading ? (
+        <p className="map-route-note">
+          Walking route to {routeState.targetLabel}: {(routeState.route.distance_meters / 1000).toFixed(1)} km |{' '}
+          {Math.max(1, Math.round(routeState.route.duration_seconds / 60))} min
+        </p>
+      ) : null}
 
       {townResults.length ? (
         <div className="map-search-results">
@@ -1124,6 +1127,7 @@ function HomePage() {
             selectedVenueId={selectedVenue?.id ?? null}
             userCoords={location.coords}
             routeTarget={routeTarget}
+            onRequestRoute={showRouteInMap}
             onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
           />
         </section>

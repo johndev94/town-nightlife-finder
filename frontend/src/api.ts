@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import type { Area, EventItem, Filters, InitialData, Venue, VenueDetail } from './types'
+import type { Area, Coords, EventItem, Filters, InitialData, RouteResponse, Venue, VenueDetail } from './types'
 
 export const initialConfig = window.__APP_CONFIG__ ?? { page: 'home', venueSlug: null, eventId: null }
 export const initialData: InitialData = window.__INITIAL_DATA__ ?? {}
@@ -79,4 +79,17 @@ export function useVenueDetail(slug: string) {
 
 export function useEventDetail(eventId: number) {
   return useFetch<EventItem>(`/api/events/${eventId}`)
+}
+
+export async function fetchRoute(from: Coords, to: Coords, mode = 'walking') {
+  const response = await fetch('/api/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, mode }),
+  })
+  const payload = (await response.json()) as RouteResponse | { error?: string }
+  if (!response.ok) {
+    throw new Error('error' in payload && payload.error ? payload.error : `Route request failed: ${response.status}`)
+  }
+  return payload as RouteResponse
 }
