@@ -50,6 +50,13 @@ type TownSearchResult = {
   boundingbox?: string[]
 }
 
+type RouteTarget = {
+  coordinates: Coords
+  label: string
+  detail: string
+  distanceMiles?: number | null
+}
+
 const DEFAULT_TOWN = {
   label: 'Ballina, Co. Mayo',
   coords: { lat: 54.1159, lng: -9.1536 },
@@ -267,13 +274,13 @@ function SidePanel({
   selectedVenue,
   hasLocation,
   onClose,
-  onShowEventRoute,
+  onShowRoute,
 }: {
   selectedEvent: EventWithDistance | null
   selectedVenue: VenueWithDistance | null
   hasLocation: boolean
   onClose: () => void
-  onShowEventRoute: (event: EventWithDistance) => void
+  onShowRoute: (target: RouteTarget) => void
 }) {
   if (!selectedEvent && !selectedVenue) return null
 
@@ -366,11 +373,29 @@ function SidePanel({
         </div>
         {destination ? (
           <div className="action-row side-actions">
-            {selectedEvent ? (
-              <button className="inline-route side-route-button" type="button" onClick={() => onShowEventRoute(selectedEvent)}>
-                {hasLocation ? 'Show route in app' : 'Use location for route'}
-              </button>
-            ) : null}
+            <button
+              className="inline-route side-route-button"
+              type="button"
+              onClick={() =>
+                onShowRoute(
+                  selectedEvent
+                    ? {
+                        coordinates: selectedEvent.venue.coordinates,
+                        label: selectedEvent.title,
+                        detail: selectedEvent.venue.name,
+                        distanceMiles: selectedEvent.distanceMiles,
+                      }
+                    : {
+                        coordinates: selectedVenue!.coordinates,
+                        label: selectedVenue!.name,
+                        detail: selectedVenue!.address,
+                        distanceMiles: selectedVenue!.distanceMiles,
+                      },
+                )
+              }
+            >
+              {hasLocation ? 'Show route in app' : 'Use location for route'}
+            </button>
             <a className="inline-route" href={mapsUrl(destination)} target="_blank" rel="noreferrer">
               Directions
             </a>
@@ -409,7 +434,7 @@ function MapPanel({
   selectedEventId: number | null
   selectedVenueId: number | null
   userCoords: Coords | null
-  routeTarget: EventWithDistance | null
+  routeTarget: RouteTarget | null
   onSelectArea: (slug: string) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
@@ -493,21 +518,46 @@ function MapPanel({
       const meta = document.createElement('span')
       meta.textContent = `${venue.address} | ${venue.opens_at} - ${venue.closes_at}`
 
+      const inAppRoute = document.createElement('button')
+      inAppRoute.type = 'button'
+      inAppRoute.className = 'event-map-popup-route'
+      inAppRoute.textContent = userCoords ? 'Show route on map' : 'Use location first'
+      inAppRoute.disabled = !userCoords
+      inAppRoute.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        drawSimpleRoute({
+          coordinates: venue.coordinates,
+          label: venue.name,
+          detail: venue.address,
+          distanceMiles: venue.distanceMiles,
+        })
+      })
+
       const directions = document.createElement('a')
       directions.href = mapsUrl(venue.coordinates)
       directions.target = '_blank'
       directions.rel = 'noreferrer'
       directions.textContent = 'Open in maps'
 
-      popup.append(kicker, title, meta, directions)
+      if (userCoords) {
+        const routeHint = document.createElement('small')
+        const miles = distanceMiles(userCoords, venue.coordinates)
+        const walkingMinutes = Math.max(1, Math.round(miles * 20))
+        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
+        return popup
+      }
+
+      popup.append(kicker, title, meta, inAppRoute, directions)
       return popup
     }
 
-    const drawSimpleRoute = (item: EventWithDistance) => {
+    const drawSimpleRoute = (target: RouteTarget) => {
       if (!userCoords || !routeLayerRef.current) return
 
       const start = L.latLng(userCoords.lat, userCoords.lng)
-      const destination = L.latLng(item.venue.coordinates.lat, item.venue.coordinates.lng)
+      const destination = L.latLng(target.coordinates.lat, target.coordinates.lng)
 
       routeLayerRef.current.clearLayers()
       L.polyline([start, destination], {
@@ -573,7 +623,12 @@ function MapPanel({
       inAppRoute.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        drawSimpleRoute(item)
+        drawSimpleRoute({
+          coordinates: item.venue.coordinates,
+          label: item.title,
+          detail: item.venue.name,
+          distanceMiles: item.distanceMiles,
+        })
       })
 
       if (userCoords) {
@@ -667,7 +722,7 @@ function MapPanel({
     if (!routeTarget || !userCoords) return
 
     const start = L.latLng(userCoords.lat, userCoords.lng)
-    const destination = L.latLng(routeTarget.venue.coordinates.lat, routeTarget.venue.coordinates.lng)
+    const destination = L.latLng(routeTarget.coordinates.lat, routeTarget.coordinates.lng)
 
     L.polyline([start, destination], {
       className: 'simple-route-line',
@@ -966,7 +1021,7 @@ function HomePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all')
   const [selectedEvent, setSelectedEvent] = useState<EventWithDistance | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<VenueWithDistance | null>(null)
-  const [routeTarget, setRouteTarget] = useState<EventWithDistance | null>(null)
+  const [routeTarget, setRouteTarget] = useState<RouteTarget | null>(null)
   const { areas, venues, events } = useDiscoveryData(filters)
 
   const venueData = useMemo(() => venues.data ?? [], [venues.data])
@@ -1008,8 +1063,8 @@ function HomePage() {
   const spotlight = venuesWithDistance[0] ?? null
   const panelOpen = Boolean(selectedEvent || selectedVenue)
 
-  function showEventRouteInMap(event: EventWithDistance) {
-    setRouteTarget(event)
+  function showRouteInMap(target: RouteTarget) {
+    setRouteTarget(target)
     if (!location.coords) location.requestLocation()
     setSelectedEvent(null)
     setSelectedVenue(null)
@@ -1140,7 +1195,7 @@ function HomePage() {
           selectedVenue={selectedVenue}
           hasLocation={Boolean(location.coords)}
           onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
-          onShowEventRoute={showEventRouteInMap}
+          onShowRoute={showRouteInMap}
         />
       </div>
     </UiThemeProvider>
