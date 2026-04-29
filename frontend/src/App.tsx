@@ -57,9 +57,22 @@ type RouteTarget = {
   distanceMiles?: number | null
 }
 
+type RouteState = {
+  loading: boolean
+  error: string | null
+  walkingRoute: RouteResponse | null
+  drivingRoute: RouteResponse | null
+  drivingUnavailable: boolean
+  targetLabel: string | null
+}
+
 const DEFAULT_TOWN = {
   label: 'Ballina, Co. Mayo',
   coords: { lat: 54.1159, lng: -9.1536 },
+}
+
+function formatTravelMinutes(seconds: number) {
+  return `${Math.max(1, Math.round(seconds / 60))} min`
 }
 
 const EVENT_MARKER_SVG = `
@@ -445,12 +458,14 @@ function MapPanel({
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const hasFittedInitialMarkers = useRef(false)
   const [mapViewMode, setMapViewMode] = useState<'all' | 'pubs' | 'events'>('all')
-  const [routeState, setRouteState] = useState<{
-    loading: boolean
-    error: string | null
-    route: RouteResponse | null
-    targetLabel: string | null
-  }>({ loading: false, error: null, route: null, targetLabel: null })
+  const [routeState, setRouteState] = useState<RouteState>({
+    loading: false,
+    error: null,
+    walkingRoute: null,
+    drivingRoute: null,
+    drivingUnavailable: false,
+    targetLabel: null,
+  })
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
   const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
@@ -664,9 +679,10 @@ function MapPanel({
       L.marker([userCoords.lat, userCoords.lng], {
         icon: L.divIcon({
           className: 'user-avatar-marker',
-          html: '<span class="avatar-pulse"></span><span class="avatar-face"><span></span></span>',
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
+          html:
+            '<span class="avatar-pulse"></span><span class="avatar-marker-pin"><span class="avatar-marker-badge"><span class="avatar-head"></span><span class="avatar-body"></span></span></span>',
+          iconSize: [42, 56],
+          iconAnchor: [21, 52],
         }),
         title: 'You are here',
         zIndexOffset: 1200,
@@ -687,7 +703,7 @@ function MapPanel({
     let active = true
     routeLayer.clearLayers()
     if (!routeTarget || !userCoords) {
-      setRouteState({ loading: false, error: null, route: null, targetLabel: null })
+      setRouteState({ loading: false, error: null, walkingRoute: null, drivingRoute: null, drivingUnavailable: false, targetLabel: null })
       return () => {
         active = false
       }
@@ -695,12 +711,26 @@ function MapPanel({
 
     const start = L.latLng(userCoords.lat, userCoords.lng)
     const destination = L.latLng(routeTarget.coordinates.lat, routeTarget.coordinates.lng)
-    setRouteState({ loading: true, error: null, route: null, targetLabel: routeTarget.label })
+    setRouteState({ loading: true, error: null, walkingRoute: null, drivingRoute: null, drivingUnavailable: false, targetLabel: routeTarget.label })
 
-    fetchRoute(userCoords, routeTarget.coordinates, 'walking')
-      .then((route) => {
+    Promise.allSettled([
+      fetchRoute(userCoords, routeTarget.coordinates, 'walking'),
+      fetchRoute(userCoords, routeTarget.coordinates, 'driving'),
+    ])
+      .then(([walkingResult, drivingResult]) => {
         if (!active) return
-        const routePoints = route.geometry.map((point) => L.latLng(point.lat, point.lng))
+        if (walkingResult.status !== 'fulfilled') {
+          throw walkingResult.reason instanceof Error ? walkingResult.reason : new Error('Could not load walking directions right now.')
+        }
+
+        const walkingRoute = walkingResult.value
+        const rawDrivingRoute = drivingResult.status === 'fulfilled' ? drivingResult.value : null
+        const drivingLooksDuplicated =
+          rawDrivingRoute !== null &&
+          Math.abs(rawDrivingRoute.duration_seconds - walkingRoute.duration_seconds) < 1 &&
+          Math.abs(rawDrivingRoute.distance_meters - walkingRoute.distance_meters) < 1
+        const drivingRoute = drivingLooksDuplicated ? null : rawDrivingRoute
+        const routePoints = walkingRoute.geometry.map((point) => L.latLng(point.lat, point.lng))
         if (!routePoints.length) throw new Error('No route geometry returned.')
 
         L.polyline(routePoints, {
@@ -730,7 +760,14 @@ function MapPanel({
         }).addTo(routeLayer)
 
         map.fitBounds(L.latLngBounds(routePoints).pad(0.18), { maxZoom: 17 })
-        setRouteState({ loading: false, error: null, route, targetLabel: routeTarget.label })
+        setRouteState({
+          loading: false,
+          error: null,
+          walkingRoute,
+          drivingRoute,
+          drivingUnavailable: drivingResult.status !== 'fulfilled' || drivingLooksDuplicated,
+          targetLabel: routeTarget.label,
+        })
       })
       .catch((error: Error) => {
         if (!active) return
@@ -738,7 +775,9 @@ function MapPanel({
         setRouteState({
           loading: false,
           error: error.message || 'Could not load directions right now.',
-          route: null,
+          walkingRoute: null,
+          drivingRoute: null,
+          drivingUnavailable: false,
           targetLabel: routeTarget.label,
         })
       })
@@ -835,10 +874,12 @@ function MapPanel({
 
       {routeState.loading ? <p className="map-route-note">Finding walking route to {routeState.targetLabel}...</p> : null}
       {routeState.error ? <p className="map-route-note route-error">{routeState.error}</p> : null}
-      {routeState.route && !routeState.loading ? (
+      {routeState.walkingRoute && !routeState.loading ? (
         <p className="map-route-note">
-          Walking route to {routeState.targetLabel}: {(routeState.route.distance_meters / 1000).toFixed(1)} km |{' '}
-          {Math.max(1, Math.round(routeState.route.duration_seconds / 60))} min
+          Walking route to {routeState.targetLabel}: {(routeState.walkingRoute.distance_meters / 1000).toFixed(1)} km | walking{' '}
+          {formatTravelMinutes(routeState.walkingRoute.duration_seconds)}
+          {routeState.drivingRoute ? ` | driving ${formatTravelMinutes(routeState.drivingRoute.duration_seconds)}` : ''}
+          {routeState.drivingUnavailable ? ' | driving estimate unavailable' : ''}
         </p>
       ) : null}
 
