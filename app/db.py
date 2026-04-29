@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS venues (
     social_facebook TEXT,
     social_instagram TEXT,
     social_website TEXT,
+    google_place_id TEXT,
+    google_maps_uri TEXT,
     is_published INTEGER NOT NULL DEFAULT 1,
     source_type TEXT NOT NULL,
     source_url TEXT,

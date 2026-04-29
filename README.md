@@ -116,3 +116,46 @@ python seed_ballina_events.py
 ```
 
 Important: this starter is intentionally compliant-first. It does not do unofficial scraping of Facebook, Instagram, TikTok, or similar platforms. The next step would be a review/import workflow that lets you approve scraped events before updating the database.
+
+## Google Places Venue Location Correction
+
+You can use Google Places to correct venue addresses and map coordinates.
+
+1. Create a Google Cloud API key with the Places API enabled.
+2. Add the key to a local `.env` file:
+
+```powershell
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+```
+
+Preview Google matches without changing the database:
+
+```powershell
+python geocode_venues_google.py --area ballina-town
+```
+
+Apply corrections after reviewing the preview:
+
+```powershell
+python geocode_venues_google.py --area ballina-town --apply
+```
+
+Correct a single venue:
+
+```powershell
+python geocode_venues_google.py --slug bar-square-ballina --apply
+```
+
+Manually correct a venue when Google returns the wrong match:
+
+```powershell
+python geocode_venues_google.py --slug bar-square-ballina --manual-lat 54.114658 --manual-lng -9.157807 --manual-address "Garden Street, Ballina, Co. Mayo, Ireland" --apply
+```
+
+Useful options:
+
+- `--min-score 0.72` only applies stronger matches.
+- `--no-address-update` updates coordinates and Google metadata but keeps your existing address text.
+- `--limit 3` checks only the first few venues while testing.
+
+This command uses Google Places Text Search with a limited field mask for place ID, display name, formatted address, coordinates, Google Maps URL, and business status.

@@ -11,7 +11,7 @@ type FetchResult<T> = {
   error: string | null
 }
 
-export function useFetch<T>(url: string, deps: React.DependencyList, seed?: T): FetchResult<T> {
+export function useFetch<T>(url: string, seed?: T): FetchResult<T> {
   const [data, setData] = useState<T | null>(seed ?? null)
   const [loading, setLoading] = useState(seed === undefined)
   const [error, setError] = useState<string | null>(null)
@@ -22,14 +22,10 @@ export function useFetch<T>(url: string, deps: React.DependencyList, seed?: T): 
 
     if (initialRef.current !== undefined) {
       initialRef.current = undefined
-      setLoading(false)
       return () => {
         active = false
       }
     }
-
-    setLoading(true)
-    setError(null)
 
     fetch(url)
       .then((response) => {
@@ -37,7 +33,10 @@ export function useFetch<T>(url: string, deps: React.DependencyList, seed?: T): 
         return response.json() as Promise<T>
       })
       .then((json) => {
-        if (active) setData(json)
+        if (active) {
+          setError(null)
+          setData(json)
+        }
       })
       .catch((err: Error) => {
         if (active) setError(err.message)
@@ -49,7 +48,7 @@ export function useFetch<T>(url: string, deps: React.DependencyList, seed?: T): 
     return () => {
       active = false
     }
-  }, deps)
+  }, [url])
 
   return { data, loading, error }
 }
@@ -68,16 +67,16 @@ export function useDiscoveryData(filters: Filters) {
   }, [filters])
 
   return {
-    areas: useFetch<Area[]>('/api/areas', [], initialData.areas),
-    venues: useFetch<Venue[]>(`/api/venues?${query}`, [query], initialData.venues),
-    events: useFetch<EventItem[]>(`/api/events?${query}`, [query], initialData.events),
+    areas: useFetch<Area[]>('/api/areas', initialData.areas),
+    venues: useFetch<Venue[]>(`/api/venues?${query}`, initialData.venues),
+    events: useFetch<EventItem[]>(`/api/events?${query}`, initialData.events),
   }
 }
 
 export function useVenueDetail(slug: string) {
-  return useFetch<VenueDetail>(`/api/venues/${slug}`, [slug])
+  return useFetch<VenueDetail>(`/api/venues/${slug}`)
 }
 
 export function useEventDetail(eventId: number) {
-  return useFetch<EventItem>(`/api/events/${eventId}`, [eventId])
+  return useFetch<EventItem>(`/api/events/${eventId}`)
 }

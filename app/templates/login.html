@@ -1,16 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Login | Town Nightlife Finder{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block body_theme %}light{% endblock %}
 {% block content %}
-<section class="auth-shell">
-  <div class="panel auth-card">
-    <p class="eyebrow">Protected workspace</p>
-    <h1>Admin and venue owner login</h1>
-    <p>Demo accounts: <code>admin / adminpass</code> and <code>velvet_owner / ownerpass</code>.</p>
-    <form method="post" class="auth-form">
-      <label>Username<input type="text" name="username" required></label>
-      <label>Password<input type="password" name="password" required></label>
-      <button type="submit">Sign in</button>
-    </form>
+<section class="auth-shell auth-shell-layout">
+  <div class="auth-stage">
+    <section class="panel auth-story">
+      <p class="eyebrow">Protected workspace</p>
+      <h1>Keep nightlife listings fresh without the admin page feeling bolted on.</h1>
+      <p class="auth-intro">Review new venue details, update opening hours, and keep event times accurate from one calmer control space.</p>
+      <div class="auth-story-grid">
+        <div>
+          <strong>Venue updates</strong>
+          <span>Edit hours, pricing, and source freshness in one place.</span>
+        </div>
+        <div>
+          <strong>Event review</strong>
+          <span>Keep tonight's listings clear before they go public.</span>
+        </div>
+        <div>
+          <strong>Owner claims</strong>
+          <span>Approve venue access without losing admin oversight.</span>
+        </div>
+      </div>
+    </section>
+    <div class="panel auth-card auth-card-match">
+      <div class="auth-card-topline">
+        <p class="eyebrow">Admin sign in</p>
+        <span class="auth-status-pill">Staff access</span>
+      </div>
+      <h2>Admin and venue owner login</h2>
+      <p class="auth-intro">Sign in to review listings, update venue details, and keep tonight's events accurate.</p>
+      <div class="auth-demo-note">
+        <strong>Demo accounts</strong>
+        <p><code>admin / adminpass</code> and <code>velvet_owner / ownerpass</code></p>
+      </div>
+      <form method="post" class="auth-form">
+        <label>
+          Username
+          <input type="text" name="username" placeholder="Enter your username" required>
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" placeholder="Enter your password" required>
+        </label>
+        <button type="submit">Sign in</button>
+      </form>
+    </div>
   </div>
 </section>
 {% endblock %}
