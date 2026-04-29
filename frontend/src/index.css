@@ -1653,6 +1653,57 @@ code {
   font-weight: 800;
 }
 
+.map-view-toolbar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+
+.map-view-toolbar .MuiToggleButtonGroup-root {
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.map-view-toolbar .MuiToggleButton-root {
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+}
+
+.map-legend-dot.pub-dot {
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+}
+
+.map-legend-dot.event-dot {
+  background: linear-gradient(135deg, #ff7a29, #2563eb);
+}
+
 .map-search-results {
   position: relative;
   z-index: 4;
@@ -1775,10 +1826,6 @@ body[data-theme="dark"] .real-map-board {
   background: rgba(20, 184, 166, 0.26);
 }
 
-.venue-leaflet-marker .marker-core {
-  background: var(--accent-2);
-}
-
 .event-leaflet-marker .marker-glow {
   top: 5px;
   left: 5px;
@@ -1826,6 +1873,41 @@ body[data-theme="dark"] .real-map-board {
 .event-leaflet-marker.active .event-marker-svg {
   transform: scale(1.12) translateY(-3px);
   filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.44));
+}
+
+.pub-marker-svg {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 58px;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.32));
+  transform-origin: 50% 92%;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.pub-pin-shadow {
+  fill: rgba(8, 15, 31, 0.42);
+  transform: translateY(2px);
+}
+
+.pub-pin-body {
+  fill: url("#pubPinGlow");
+  stroke: #fff9ef;
+  stroke-width: 3;
+}
+
+.pub-pin-inner {
+  fill: rgba(8, 15, 31, 0.88);
+}
+
+.pub-pin-glass {
+  fill: #fff9ef;
+}
+
+.venue-leaflet-marker:hover .pub-marker-svg,
+.venue-leaflet-marker.active .pub-marker-svg {
+  transform: scale(1.1) translateY(-3px);
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.4));
 }
 
 .leaflet-night-marker.active .marker-core {
@@ -1961,6 +2043,14 @@ body[data-theme="light"] .nightlife-leaflet-popup .leaflet-popup-tip {
   .map-toolbar {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .map-view-toolbar {
+    align-items: stretch;
+  }
+
+  .map-legend {
+    justify-content: space-between;
   }
 
   .map-search {

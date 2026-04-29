@@ -71,6 +71,22 @@ const EVENT_MARKER_SVG = `
   </svg>
 `
 
+const PUB_MARKER_SVG = `
+  <svg class="pub-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="pubPinGlow" x1="12%" x2="88%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#14b8a6" />
+        <stop offset="56%" stop-color="#0f766e" />
+        <stop offset="100%" stop-color="#2563eb" />
+      </linearGradient>
+    </defs>
+    <path class="pub-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
+    <path class="pub-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
+    <circle class="pub-pin-inner" cx="32" cy="29" r="15" />
+    <path class="pub-pin-glass" d="M23 19h16v5c0 3-1.8 5.8-4.7 7.2V37h4.2a2 2 0 1 1 0 4H25.5a2 2 0 1 1 0-4h4.8v-5.8A8.1 8.1 0 0 1 23 24v-5Zm3.8 5c0 2.9 2.3 5.2 5.2 5.2s5.2-2.3 5.2-5.2v-1.2H26.8V24Z" />
+  </svg>
+`
+
 function UiThemeProvider({ mode, children }: { mode: Theme; children: ReactNode }) {
   const muiTheme = useMemo(
     () =>
@@ -396,6 +412,7 @@ function MapPanel({
   const markerLayerRef = useRef<L.LayerGroup | null>(null)
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const hasFittedInitialMarkers = useRef(false)
+  const [mapViewMode, setMapViewMode] = useState<'all' | 'pubs' | 'events'>('all')
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
   const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
@@ -444,9 +461,9 @@ function MapPanel({
     const venueIcon = (active: boolean) =>
       L.divIcon({
         className: classNames('leaflet-night-marker', 'venue-leaflet-marker', active && 'active'),
-        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
+        html: `<span class="marker-glow"></span>${PUB_MARKER_SVG}`,
+        iconSize: [48, 58],
+        iconAnchor: [24, 54],
       })
 
     const eventIcon = (active: boolean) =>
@@ -567,46 +584,54 @@ function MapPanel({
       return popup
     }
 
-    venues.forEach((venue) => {
-      const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
-      L.marker(venuePosition, {
-        icon: venueIcon(selectedVenueId === venue.id),
-        title: venue.name,
-      })
-        .bindPopup(venuePopup(venue), {
-          className: 'nightlife-leaflet-popup',
-          closeButton: true,
-          maxWidth: 260,
-        })
-        .on('click', () => {
-          map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
-        })
-        .addTo(layer)
-    })
+    const visiblePositions: L.LatLng[] = []
 
-    events.forEach((item, index) => {
-      const offset = (index % 5) * 0.000035
-      const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
-      const marker = L.marker(eventPosition, {
-        icon: eventIcon(selectedEventId === item.id),
-        title: item.title,
-        zIndexOffset: 500 + index,
-      })
-        .bindPopup(eventPopup(item), {
-          className: 'nightlife-leaflet-popup',
-          closeButton: true,
-          maxWidth: 260,
+    if (mapViewMode !== 'events') {
+      venues.forEach((venue) => {
+        const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
+        visiblePositions.push(venuePosition)
+        L.marker(venuePosition, {
+          icon: venueIcon(selectedVenueId === venue.id),
+          title: venue.name,
         })
-        .on('click', () => {
+          .bindPopup(venuePopup(venue), {
+            className: 'nightlife-leaflet-popup',
+            closeButton: true,
+            maxWidth: 260,
+          })
+          .on('click', () => {
+            map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
+          })
+          .addTo(layer)
+      })
+    }
+
+    if (mapViewMode !== 'pubs') {
+      events.forEach((item, index) => {
+        const offset = (index % 5) * 0.000035
+        const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
+        visiblePositions.push(eventPosition)
+        const marker = L.marker(eventPosition, {
+          icon: eventIcon(selectedEventId === item.id),
+          title: item.title,
+          zIndexOffset: 500 + index,
+        })
+          .bindPopup(eventPopup(item), {
+            className: 'nightlife-leaflet-popup',
+            closeButton: true,
+            maxWidth: 260,
+          })
+          .on('click', () => {
+            map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+          })
+          .addTo(layer)
+
+        if (selectedEventId === item.id) {
           map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
-        })
-        .addTo(layer)
-
-      if (selectedEventId === item.id) {
-        map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
-        marker.openPopup()
-      }
-    })
+          marker.openPopup()
+        }
+      })
+    }
 
     if (userCoords) {
       L.marker([userCoords.lat, userCoords.lng], {
@@ -621,12 +646,12 @@ function MapPanel({
       }).addTo(layer)
     }
 
-    if (!hasFittedInitialMarkers.current && venues.length > 0) {
-      const bounds = L.latLngBounds(venues.map((venue) => [venue.coordinates.lat, venue.coordinates.lng]))
+    if (!hasFittedInitialMarkers.current && visiblePositions.length > 0) {
+      const bounds = L.latLngBounds(visiblePositions)
       map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
       hasFittedInitialMarkers.current = true
     }
-  }, [events, selectedEventId, selectedVenueId, userCoords, venues])
+  }, [events, mapViewMode, selectedEventId, selectedVenueId, userCoords, venues])
 
   useEffect(() => {
     const map = mapRef.current
@@ -732,6 +757,26 @@ function MapPanel({
           />
           <button type="submit">{townSearchStatus === 'loading' ? 'Searching...' : 'Go'}</button>
         </form>
+      </div>
+
+      <div className="map-view-toolbar">
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={mapViewMode}
+          onChange={(_, value: 'all' | 'pubs' | 'events' | null) => {
+            if (!value) return
+            setMapViewMode(value)
+          }}
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="pubs">Pubs</ToggleButton>
+          <ToggleButton value="events">Events</ToggleButton>
+        </ToggleButtonGroup>
+        <div className="map-legend">
+          <span className="map-legend-item"><span className="map-legend-dot pub-dot" />Pubs</span>
+          <span className="map-legend-item"><span className="map-legend-dot event-dot" />Events</span>
+        </div>
       </div>
 
       {townResults.length ? (
