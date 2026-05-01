@@ -224,3 +224,32 @@ Notes:
 - Posts are imported only when the text looks event-related and includes an inferable date/time.
 - Imported records use `source_type = facebook-apify` and `sync_status = needs-review`.
 - Apify usage may cost money depending on your plan and how many posts you request.
+
+## Facebook Page Discovery
+
+You can also search for likely Facebook pages for Ballina venues that do not have one saved yet.
+
+Preview likely matches without writing anything:
+
+```powershell
+python find_ballina_facebook_pages.py
+```
+
+Check one venue:
+
+```powershell
+python find_ballina_facebook_pages.py --slug bar-square-ballina
+```
+
+Save only confident matches:
+
+```powershell
+python find_ballina_facebook_pages.py --apply
+```
+
+Useful options:
+
+- `--all` checks venues even if they already have a Facebook URL.
+- `--min-score 0.78` raises the confidence threshold.
+- `--min-gap 0.12` requires a bigger lead over the second-best candidate.
+- `--output facebook-pages.json` writes the full report to disk.

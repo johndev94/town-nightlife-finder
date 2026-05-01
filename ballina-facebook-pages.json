@@ -1,0 +1,286 @@
+{
+  "checked": 17,
+  "applied": 2,
+  "min_score": 0.72,
+  "min_gap": 0.08,
+  "results": [
+    {
+      "venue": {
+        "id": 9,
+        "name": "An Bolg Bu\u00ed Pub",
+        "slug": "an-bolg-bu-pub"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 10,
+        "name": "An Sean S\u00edb\u00edn (The Auld Shebeen) (Betty's)",
+        "slug": "an-sean-s-b-n-the-auld-shebeen-betty-s"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 5,
+        "name": "Bar Square",
+        "slug": "bar-square-ballina"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/barsquareballina/",
+        "title": "Bar Square | Paddy Mac's | Time Square Ballina",
+        "snippet": "Linked from https://www.barsquare-ballina.com/",
+        "score": 1.0,
+        "reasons": [
+          "exact venue name",
+          "1/1 venue tokens",
+          "1/1 URL slug tokens",
+          "mentions Ballina",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/barsquareballina/",
+          "title": "Bar Square | Paddy Mac's | Time Square Ballina",
+          "snippet": "Linked from https://www.barsquare-ballina.com/",
+          "score": 1.0,
+          "reasons": [
+            "exact venue name",
+            "1/1 venue tokens",
+            "1/1 URL slug tokens",
+            "mentions Ballina",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/paddymacsballina/",
+          "title": "Bar Square | Paddy Mac's | Time Square Ballina",
+          "snippet": "Linked from https://www.barsquare-ballina.com/",
+          "score": 0.811,
+          "reasons": [
+            "exact venue name",
+            "1/1 venue tokens",
+            "mentions Ballina",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 11,
+        "name": "Dillon's Bar & Restaurant",
+        "slug": "dillon-s-bar-restaurant"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 12,
+        "name": "Harrisons",
+        "slug": "harrisons"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 14,
+        "name": "Howard's Bar",
+        "slug": "howard-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 15,
+        "name": "Jimmy's Bar",
+        "slug": "jimmy-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 16,
+        "name": "Katie's Corner",
+        "slug": "katie-s-corner"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 17,
+        "name": "Keanes Pub",
+        "slug": "keanes-pub"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 7,
+        "name": "McShane's Bar Ballina",
+        "slug": "mcshanes-bar-ballina"
+      },
+      "existing_facebook_url": null,
+      "status": "error",
+      "selected": null,
+      "candidates": [],
+      "error": "403 Client Error: Forbidden for url: https://www.hotelballina.ie/mcshanes-bar/"
+    },
+    {
+      "venue": {
+        "id": 6,
+        "name": "Paddy Mac's Ballina",
+        "slug": "paddy-macs-ballina"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/paddymacsballina/",
+        "title": "Paddy Macs | Bar Square | Time Square | Paddy Mac's",
+        "snippet": "Linked from https://www.barsquare-ballina.com/paddy-macs",
+        "score": 1.0,
+        "reasons": [
+          "3/3 venue tokens",
+          "3/3 URL slug tokens",
+          "mentions Ballina",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/paddymacsballina/",
+          "title": "Paddy Macs | Bar Square | Time Square | Paddy Mac's",
+          "snippet": "Linked from https://www.barsquare-ballina.com/paddy-macs",
+          "score": 1.0,
+          "reasons": [
+            "3/3 venue tokens",
+            "3/3 URL slug tokens",
+            "mentions Ballina",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/barsquareballina/",
+          "title": "Paddy Macs | Bar Square | Time Square | Paddy Mac's",
+          "snippet": "Linked from https://www.barsquare-ballina.com/paddy-macs",
+          "score": 0.907,
+          "reasons": [
+            "3/3 venue tokens",
+            "1/3 URL slug tokens",
+            "mentions Ballina",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 19,
+        "name": "Quay West Ballina",
+        "slug": "quay-west-ballina"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 21,
+        "name": "T. Breathnach",
+        "slug": "t-breathnach"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 23,
+        "name": "The Junction",
+        "slug": "the-junction"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 24,
+        "name": "The Loft Ballina",
+        "slug": "the-loft-ballina"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 26,
+        "name": "V J Doherty",
+        "slug": "v-j-doherty"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 27,
+        "name": "Vincy's Bar",
+        "slug": "vincy-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    }
+  ]
+}
