@@ -159,3 +159,68 @@ Useful options:
 - `--limit 3` checks only the first few venues while testing.
 
 This command uses Google Places Text Search with a limited field mask for place ID, display name, formatted address, coordinates, Google Maps URL, and business status.
+
+## Apify Facebook Event Import
+
+The app can import event-like posts from verified public Facebook pages using Apify's Facebook Posts Scraper.
+
+Add your Apify token to `.env`:
+
+```powershell
+APIFY_API_TOKEN=your_apify_api_token_here
+```
+
+Seed the starter Ballina Facebook page URLs:
+
+```powershell
+python seed_ballina_facebook_pages.py
+```
+
+Preview extracted Facebook post events without changing the database:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10
+```
+
+Inspect fetched post previews and parser hints:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --debug-posts
+```
+
+OCR for flyer images:
+
+- The importer can now OCR text from Facebook post images before deciding whether a post is an event.
+- Install Python dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+- On Windows, install Tesseract OCR and make sure `tesseract` is available in `PATH`.
+- After that, the debug output will show `"ocr_available": true` and include `ocr_preview` text for posts with images.
+
+Import as drafts for review:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --apply
+```
+
+Import and publish immediately so they show on the public page:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --apply --publish
+```
+
+Target one venue:
+
+```powershell
+python sync_facebook_events_apify.py --slug the-cot-and-cobble --apply --publish
+```
+
+Notes:
+
+- The importer only uses public Facebook page URLs stored on venues.
+- Posts are imported only when the text looks event-related and includes an inferable date/time.
+- Imported records use `source_type = facebook-apify` and `sync_status = needs-review`.
+- Apify usage may cost money depending on your plan and how many posts you request.
