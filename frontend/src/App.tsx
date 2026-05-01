@@ -75,6 +75,30 @@ function formatTravelMinutes(seconds: number) {
   return `${Math.max(1, Math.round(seconds / 60))} min`
 }
 
+function dateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function tonightDateValue() {
+  return dateInputValue(new Date())
+}
+
+function weekendDateValue() {
+  const date = new Date()
+  const day = date.getDay()
+  const daysUntilSaturday = (6 - day + 7) % 7
+  date.setDate(date.getDate() + daysUntilSaturday)
+  return dateInputValue(date)
+}
+
+function firstExistingOption(options: string[], candidates: string[]) {
+  const normalized = new Map(options.map((option) => [option.toLowerCase(), option]))
+  return candidates.map((candidate) => normalized.get(candidate.toLowerCase())).find(Boolean) ?? candidates[0]
+}
+
 const EVENT_MARKER_SVG = `
   <svg class="event-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
     <defs>
@@ -305,10 +329,12 @@ function SidePanel({
     <>
       <button className="panel-scrim" type="button" onClick={onClose} aria-label="Close panel" />
       <aside className="side-panel" role="dialog" aria-modal="true" aria-labelledby="side-panel-title">
-        <button className="side-panel-close" type="button" onClick={onClose}>
-          x
-        </button>
-        <div className="side-panel-ribbon" />
+        <div className="side-panel-topbar">
+          <div className="side-panel-ribbon" />
+          <button className="side-panel-close" type="button" onClick={onClose} aria-label="Close details panel">
+            ×
+          </button>
+        </div>
         <p className="side-panel-kicker">
           {selectedEvent
             ? `${selectedEvent.genre} event`
@@ -944,14 +970,37 @@ function FilterSurface({
   priceBands: string[]
   onChange: (filters: Filters) => void
 }) {
+  const nightclubType = venueTypes.find((type) => type.toLowerCase() === 'nightclub') ?? ''
+  const popularFilters = [
+    { label: 'All', target: { date: '', genre: '', venue_type: '' } },
+    { label: 'Tonight', target: { date: tonightDateValue(), genre: '', venue_type: '' } },
+    { label: 'This Weekend', target: { date: weekendDateValue(), genre: '', venue_type: '' } },
+    { label: 'Music', target: { date: '', genre: firstExistingOption(genres, ['Music', 'Live Music', 'Soul', 'Pop']), venue_type: '' } },
+    { label: 'Quiz', target: { date: '', genre: firstExistingOption(genres, ['Quiz']), venue_type: '' } },
+    {
+      label: 'Clubs & Parties',
+      target: {
+        date: '',
+        genre: nightclubType ? '' : firstExistingOption(genres, ['Dance', 'Pop']),
+        venue_type: nightclubType,
+      },
+    },
+    { label: 'Seasonal', target: { date: '', genre: firstExistingOption(genres, ['Seasonal']), venue_type: '' } },
+    { label: 'Comedy & Shows', target: { date: '', genre: firstExistingOption(genres, ['Comedy', 'Shows']), venue_type: '' } },
+    { label: 'Food & Drink', target: { date: '', genre: firstExistingOption(genres, ['Food & Drink', 'Tasting']), venue_type: '' } },
+  ]
+
+  const isActivePopularFilter = (target: { date: string; genre: string; venue_type: string }) =>
+    filters.date === target.date && filters.genre === target.genre && filters.venue_type === target.venue_type
+
   return (
     <Paper className="mui-filter-surface" component="section" elevation={0} variant="outlined">
       <Stack direction={{ md: 'row', xs: 'column' }} sx={{ alignItems: { md: 'center', xs: 'stretch' }, gap: 2, justifyContent: 'space-between', mb: 2 }}>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2 }}>
           <TuneRoundedIcon color="primary" />
           <Box>
-            <Typography sx={{ fontWeight: 800 }}>Filter the night</Typography>
-            <Typography color="text.secondary" variant="body2">Sort by vibe, spend, timing, or what is near you</Typography>
+            <Typography sx={{ fontWeight: 800 }}>Explore what's popular within Nightlife</Typography>
+            <Typography color="text.secondary" variant="body2">Quickly jump into the kind of night you are planning.</Typography>
           </Box>
         </Stack>
         <FormControlLabel
@@ -959,6 +1008,20 @@ function FilterSurface({
           label="Open now"
         />
       </Stack>
+      <Box className="popular-filter-row" role="list" aria-label="Popular nightlife filters">
+        {popularFilters.map((item) => (
+          <Button
+            key={item.label}
+            className={classNames('popular-filter-button', isActivePopularFilter(item.target) && 'active')}
+            onClick={() => onChange({ ...filters, ...item.target })}
+            role="listitem"
+            size="small"
+            variant={isActivePopularFilter(item.target) ? 'contained' : 'outlined'}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </Box>
       <Box className="mui-filter-grid">
         <TextField
           label="Date"

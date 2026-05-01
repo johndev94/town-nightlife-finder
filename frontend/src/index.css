@@ -729,6 +729,37 @@ body[data-theme="dark"] .district-card {
   gap: 12px;
 }
 
+.popular-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 6px 0 18px;
+}
+
+.popular-filter-button {
+  min-height: 38px;
+  border-radius: 999px;
+  border-color: rgba(23, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.popular-filter-button.active {
+  background: #17202a;
+  color: #ffffff;
+}
+
+body[data-theme="dark"] .popular-filter-button {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme="dark"] .popular-filter-button.active {
+  background: #f8fafc;
+  color: #07101f;
+}
+
 .mui-events-toolbar {
   display: flex;
   align-items: center;
@@ -1282,7 +1313,7 @@ body[data-theme="dark"] .mui-card-facts svg {
   right: 18px;
   bottom: 18px;
   width: min(420px, calc(100vw - 28px));
-  padding: 28px 24px 24px;
+  padding: 18px 24px 24px;
   border-radius: 28px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
@@ -1291,16 +1322,35 @@ body[data-theme="dark"] .mui-card-facts svg {
   overflow: auto;
 }
 
+.side-panel-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 14px;
+  padding: 4px 0 8px;
+  background: linear-gradient(180deg, var(--panel-strong) 78%, rgba(255, 255, 255, 0));
+}
+
 .side-panel-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.74);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   color: var(--ink);
+  box-shadow: 0 10px 22px rgba(18, 30, 58, 0.12);
+  font-size: 1.4rem;
+  line-height: 1;
 }
 
 .side-panel-ribbon {
@@ -1308,7 +1358,7 @@ body[data-theme="dark"] .mui-card-facts svg {
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--accent), var(--accent-3));
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
 .side-panel-kicker {
@@ -1418,6 +1468,15 @@ body[data-theme="dark"] .panel-scrim {
 
 body[data-theme="dark"] .side-panel {
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="dark"] .side-panel-topbar {
+  background: linear-gradient(180deg, var(--panel-strong) 78%, rgba(7, 11, 20, 0));
+}
+
+body[data-theme="dark"] .side-panel-close {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(125, 211, 252, 0.16);
 }
 
 .spotlight-banner {
