@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
 from functools import wraps
 
+import requests
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import current_app
 
 from .db import get_db
 
@@ -186,8 +188,39 @@ def format_event(row):
         "end_at": row["end_at"],
         "price_label": row["price_label"],
         "price_amount": row["price_amount"],
+        "image_url": row["image_url"] if "image_url" in row.keys() else None,
         "venue": {"name": row["venue_name"], "slug": row["venue_slug"], "type": row["venue_type"], "address": row["address"], "price_band": row["price_band"], "opens_at": row["opens_at"], "closes_at": row["closes_at"], "coordinates": {"lat": row["latitude"], "lng": row["longitude"]}, "area": {"name": row["area_name"], "slug": row["area_slug"]}},
         "source": {"type": row["source_type"], "url": row["source_url"], "status": row["sync_status"], "confidence": row["confidence"], "last_verified_at": row["last_verified_at"]},
+    }
+
+
+def compute_osrm_route(from_coords, to_coords, mode="walking"):
+    profile = {
+        "walking": "foot",
+        "driving": "driving",
+        "cycling": "bike",
+    }.get(mode, "foot")
+    base_url = current_app.config["OSRM_BASE_URL"].rstrip("/")
+    coordinates = f"{from_coords['lng']},{from_coords['lat']};{to_coords['lng']},{to_coords['lat']}"
+    response = requests.get(
+        f"{base_url}/route/v1/{profile}/{coordinates}",
+        params={"overview": "full", "geometries": "geojson", "steps": "false"},
+        timeout=15,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    routes = payload.get("routes") or []
+    if not routes:
+        raise ValueError("No route found")
+    route = routes[0]
+    coordinates_list = route.get("geometry", {}).get("coordinates") or []
+    geometry = [{"lat": point[1], "lng": point[0]} for point in coordinates_list if len(point) >= 2]
+    return {
+        "distance_meters": route.get("distance"),
+        "duration_seconds": route.get("duration"),
+        "geometry": geometry,
+        "mode": mode,
+        "provider": "osrm",
     }
 
 
@@ -280,6 +313,38 @@ def api_venues():
 @bp.get("/api/events")
 def api_events():
     return jsonify([format_event(row) for row in fetch_events(normalize_filters(request.args))])
+
+
+@bp.post("/api/route")
+def api_route():
+    payload = request.get_json(silent=True) or {}
+    from_coords = payload.get("from")
+    to_coords = payload.get("to")
+    mode = (payload.get("mode") or "walking").strip().lower()
+
+    if not isinstance(from_coords, dict) or not isinstance(to_coords, dict):
+        return jsonify({"error": "Both 'from' and 'to' coordinates are required."}), 400
+
+    try:
+        from_lat = float(from_coords["lat"])
+        from_lng = float(from_coords["lng"])
+        to_lat = float(to_coords["lat"])
+        to_lng = float(to_coords["lng"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "Invalid route coordinates."}), 400
+
+    try:
+        route = compute_osrm_route(
+            {"lat": from_lat, "lng": from_lng},
+            {"lat": to_lat, "lng": to_lng},
+            mode=mode,
+        )
+    except requests.RequestException:
+        return jsonify({"error": "Routing service is unavailable right now."}), 502
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    return jsonify(route)
 
 
 @bp.get("/api/events/<int:event_id>")

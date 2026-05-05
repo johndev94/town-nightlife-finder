@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS events (
     end_at TEXT NOT NULL,
     price_label TEXT NOT NULL,
     price_amount REAL,
+    image_url TEXT,
     currency TEXT NOT NULL DEFAULT 'GBP',
     is_published INTEGER NOT NULL DEFAULT 1,
     source_type TEXT NOT NULL,
@@ -246,7 +247,14 @@ def init_app(app):
 def init_db():
     db = get_db()
     db.executescript(SCHEMA)
+    ensure_schema_upgrades(db)
     seed_if_empty(db)
+
+
+def ensure_schema_upgrades(db):
+    event_columns = {row["name"] for row in db.execute("PRAGMA table_info(events)").fetchall()}
+    if "image_url" not in event_columns:
+        db.execute("ALTER TABLE events ADD COLUMN image_url TEXT")
 
 
 def seed_if_empty(db):

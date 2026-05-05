@@ -1,8 +1,10 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from app import create_app
+from app.db import get_db, init_db
 
 
 class NightlifeFinderTestCase(unittest.TestCase):
@@ -40,6 +42,17 @@ class NightlifeFinderTestCase(unittest.TestCase):
         self.assertEqual(payload["title"], "Karaoke Night")
         self.assertIn("coordinates", payload["venue"])
         self.assertIn("lat", payload["venue"]["coordinates"])
+        self.assertIn("image_url", payload)
+
+    def test_event_detail_api_includes_image_url(self):
+        with self.app.app_context():
+            init_db()
+            get_db().execute("UPDATE events SET image_url = ? WHERE id = 1", ("https://cdn.example.com/flyer.jpg",))
+            get_db().commit()
+
+        response = self.client.get("/api/events/1")
+
+        self.assertEqual(response.get_json()["image_url"], "https://cdn.example.com/flyer.jpg")
 
     def test_event_page_route_exists(self):
         response = self.client.get("/events/1")
@@ -82,6 +95,45 @@ class NightlifeFinderTestCase(unittest.TestCase):
         response = self.client.post("/dashboard/claims/1", data={"status": "approved"}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("Claim marked as approved.", response.get_data(as_text=True))
+
+    @patch("app.views.requests.get")
+    def test_route_api_returns_osrm_geometry(self, mock_get):
+        class MockResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "routes": [
+                        {
+                            "distance": 1200.0,
+                            "duration": 840.0,
+                            "geometry": {
+                                "coordinates": [
+                                    [-9.1536, 54.1159],
+                                    [-9.151, 54.1165],
+                                ]
+                            },
+                        }
+                    ]
+                }
+
+        mock_get.return_value = MockResponse()
+
+        response = self.client.post(
+            "/api/route",
+            json={
+                "from": {"lat": 54.1159, "lng": -9.1536},
+                "to": {"lat": 54.1165, "lng": -9.1510},
+                "mode": "walking",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["provider"], "osrm")
+        self.assertEqual(len(payload["geometry"]), 2)
+        self.assertEqual(payload["geometry"][0]["lat"], 54.1159)
 
 
 if __name__ == "__main__":

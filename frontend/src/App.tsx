@@ -38,9 +38,9 @@ import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 
-import { initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
+import { fetchRoute, initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
-import type { Area, Coords, EventWithDistance, Filters, Theme, VenueWithDistance } from './types'
+import type { Area, Coords, EventWithDistance, Filters, RouteResponse, Theme, VenueWithDistance } from './types'
 
 type TownSearchResult = {
   place_id: number
@@ -50,24 +50,89 @@ type TownSearchResult = {
   boundingbox?: string[]
 }
 
+type RouteTarget = {
+  coordinates: Coords
+  label: string
+  detail: string
+  distanceMiles?: number | null
+}
+
+type RouteState = {
+  loading: boolean
+  error: string | null
+  walkingRoute: RouteResponse | null
+  drivingRoute: RouteResponse | null
+  drivingUnavailable: boolean
+  targetLabel: string | null
+}
+
 const DEFAULT_TOWN = {
   label: 'Ballina, Co. Mayo',
   coords: { lat: 54.1159, lng: -9.1536 },
+}
+
+function formatTravelMinutes(seconds: number) {
+  return `${Math.max(1, Math.round(seconds / 60))} min`
+}
+
+function dateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function tonightDateValue() {
+  return dateInputValue(new Date())
+}
+
+function weekendDateValue() {
+  const date = new Date()
+  const day = date.getDay()
+  const daysUntilSaturday = (6 - day + 7) % 7
+  date.setDate(date.getDate() + daysUntilSaturday)
+  return dateInputValue(date)
+}
+
+function firstExistingOption(options: string[], candidates: string[]) {
+  const normalized = new Map(options.map((option) => [option.toLowerCase(), option]))
+  return candidates.map((candidate) => normalized.get(candidate.toLowerCase())).find(Boolean) ?? candidates[0]
 }
 
 const EVENT_MARKER_SVG = `
   <svg class="event-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="eventPinGlow" x1="10%" x2="90%" y1="0%" y2="100%">
-        <stop offset="0%" stop-color="#ff7a29" />
-        <stop offset="54%" stop-color="#f4c95d" />
-        <stop offset="100%" stop-color="#32c3ff" />
+        <stop offset="0%" stop-color="#ec4899" />
+        <stop offset="54%" stop-color="#8b5cf6" />
+        <stop offset="100%" stop-color="#2563eb" />
+      </linearGradient>
+      <linearGradient id="eventSparkGlow" x1="0%" x2="100%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#fff4fb" />
+        <stop offset="100%" stop-color="#fefce8" />
       </linearGradient>
     </defs>
     <path class="event-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
     <path class="event-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
     <circle class="event-pin-inner" cx="32" cy="29" r="15" />
-    <path class="event-pin-note" d="M37 18v20.5a5.5 5.5 0 1 1-3-4.9V23l-12 3v14.5a5.5 5.5 0 1 1-3-4.9V23.7L37 18Z" />
+    <path class="event-pin-star" d="m32 15.8 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-2.9-5.6 2.9 1.1-6.3-4.6-4.5 6.3-.9 2.8-5.7Z" />
+    <path class="event-pin-ticket" d="M24 35.5h16c.8 0 1.5.7 1.5 1.5v2.2c-1.1.2-1.9 1.1-1.9 2.3s.8 2.1 1.9 2.3V46c0 .8-.7 1.5-1.5 1.5H24c-.8 0-1.5-.7-1.5-1.5v-2.2c1.1-.2 1.9-1.1 1.9-2.3s-.8-2.1-1.9-2.3V37c0-.8.7-1.5 1.5-1.5Zm6 2.3v7.4m4-7.4v7.4" />
+  </svg>
+`
+
+const PUB_MARKER_SVG = `
+  <svg class="pub-marker-svg" viewBox="0 0 64 78" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="pubPinGlow" x1="12%" x2="88%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#14b8a6" />
+        <stop offset="56%" stop-color="#0f766e" />
+        <stop offset="100%" stop-color="#2563eb" />
+      </linearGradient>
+    </defs>
+    <path class="pub-pin-shadow" d="M32 76C22 60 8 50 8 28C8 12 18 3 32 3s24 9 24 25c0 22-14 32-24 48Z" />
+    <path class="pub-pin-body" d="M32 72C22 56 10 48 10 28C10 13 19 5 32 5s22 8 22 23c0 20-12 28-22 44Z" />
+    <circle class="pub-pin-inner" cx="32" cy="29" r="15" />
+    <path class="pub-pin-glass" d="M23 19h16v5c0 3-1.8 5.8-4.7 7.2V37h4.2a2 2 0 1 1 0 4H25.5a2 2 0 1 1 0-4h4.8v-5.8A8.1 8.1 0 0 1 23 24v-5Zm3.8 5c0 2.9 2.3 5.2 5.2 5.2s5.2-2.3 5.2-5.2v-1.2H26.8V24Z" />
   </svg>
 `
 
@@ -246,13 +311,13 @@ function SidePanel({
   selectedVenue,
   hasLocation,
   onClose,
-  onShowEventRoute,
+  onShowRoute,
 }: {
   selectedEvent: EventWithDistance | null
   selectedVenue: VenueWithDistance | null
   hasLocation: boolean
   onClose: () => void
-  onShowEventRoute: (event: EventWithDistance) => void
+  onShowRoute: (target: RouteTarget) => void
 }) {
   if (!selectedEvent && !selectedVenue) return null
 
@@ -264,10 +329,12 @@ function SidePanel({
     <>
       <button className="panel-scrim" type="button" onClick={onClose} aria-label="Close panel" />
       <aside className="side-panel" role="dialog" aria-modal="true" aria-labelledby="side-panel-title">
-        <button className="side-panel-close" type="button" onClick={onClose}>
-          x
-        </button>
-        <div className="side-panel-ribbon" />
+        <div className="side-panel-topbar">
+          <div className="side-panel-ribbon" />
+          <button className="side-panel-close" type="button" onClick={onClose} aria-label="Close details panel">
+            ×
+          </button>
+        </div>
         <p className="side-panel-kicker">
           {selectedEvent
             ? `${selectedEvent.genre} event`
@@ -277,6 +344,11 @@ function SidePanel({
         <p className="side-panel-copy">
           {selectedEvent ? selectedEvent.description : selectedVenue?.description}
         </p>
+        {selectedEvent?.image_url ? (
+          <figure className="event-panel-image">
+            <img src={selectedEvent.image_url} alt={`${selectedEvent.title} event poster`} loading="lazy" />
+          </figure>
+        ) : null}
         <div className="side-stat-grid">
           <div>
             <strong>{formatDistance(distance)}</strong>
@@ -345,11 +417,29 @@ function SidePanel({
         </div>
         {destination ? (
           <div className="action-row side-actions">
-            {selectedEvent ? (
-              <button className="inline-route side-route-button" type="button" onClick={() => onShowEventRoute(selectedEvent)}>
-                {hasLocation ? 'Show route in app' : 'Use location for route'}
-              </button>
-            ) : null}
+            <button
+              className="inline-route side-route-button"
+              type="button"
+              onClick={() =>
+                onShowRoute(
+                  selectedEvent
+                    ? {
+                        coordinates: selectedEvent.venue.coordinates,
+                        label: selectedEvent.title,
+                        detail: selectedEvent.venue.name,
+                        distanceMiles: selectedEvent.distanceMiles,
+                      }
+                    : {
+                        coordinates: selectedVenue!.coordinates,
+                        label: selectedVenue!.name,
+                        detail: selectedVenue!.address,
+                        distanceMiles: selectedVenue!.distanceMiles,
+                      },
+                )
+              }
+            >
+              {hasLocation ? 'Show route in app' : 'Use location for route'}
+            </button>
             <a className="inline-route" href={mapsUrl(destination)} target="_blank" rel="noreferrer">
               Directions
             </a>
@@ -379,6 +469,7 @@ function MapPanel({
   selectedVenueId,
   userCoords,
   routeTarget,
+  onRequestRoute,
   onSelectArea,
 }: {
   areas: Area[]
@@ -388,7 +479,8 @@ function MapPanel({
   selectedEventId: number | null
   selectedVenueId: number | null
   userCoords: Coords | null
-  routeTarget: EventWithDistance | null
+  routeTarget: RouteTarget | null
+  onRequestRoute: (target: RouteTarget) => void
   onSelectArea: (slug: string) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
@@ -396,6 +488,15 @@ function MapPanel({
   const markerLayerRef = useRef<L.LayerGroup | null>(null)
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const hasFittedInitialMarkers = useRef(false)
+  const [mapViewMode, setMapViewMode] = useState<'all' | 'pubs' | 'events'>('all')
+  const [routeState, setRouteState] = useState<RouteState>({
+    loading: false,
+    error: null,
+    walkingRoute: null,
+    drivingRoute: null,
+    drivingUnavailable: false,
+    targetLabel: null,
+  })
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
   const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
@@ -444,9 +545,9 @@ function MapPanel({
     const venueIcon = (active: boolean) =>
       L.divIcon({
         className: classNames('leaflet-night-marker', 'venue-leaflet-marker', active && 'active'),
-        html: '<span class="marker-glow"></span><span class="marker-core"></span>',
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
+        html: `<span class="marker-glow"></span>${PUB_MARKER_SVG}`,
+        iconSize: [48, 58],
+        iconAnchor: [24, 54],
       })
 
     const eventIcon = (active: boolean) =>
@@ -471,51 +572,37 @@ function MapPanel({
       const meta = document.createElement('span')
       meta.textContent = `${venue.address} | ${venue.opens_at} - ${venue.closes_at}`
 
+      const inAppRoute = document.createElement('button')
+      inAppRoute.type = 'button'
+      inAppRoute.className = 'event-map-popup-route'
+      inAppRoute.textContent = userCoords ? 'Show route on map' : 'Use location first'
+      inAppRoute.disabled = !userCoords
+      inAppRoute.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onRequestRoute({
+          coordinates: venue.coordinates,
+          label: venue.name,
+          detail: venue.address,
+          distanceMiles: venue.distanceMiles,
+        })
+      })
+
       const directions = document.createElement('a')
       directions.href = mapsUrl(venue.coordinates)
       directions.target = '_blank'
       directions.rel = 'noreferrer'
       directions.textContent = 'Open in maps'
 
-      popup.append(kicker, title, meta, directions)
+      if (userCoords) {
+        const routeHint = document.createElement('small')
+        routeHint.textContent = 'Show route on map for walking directions that follow roads.'
+        popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
+        return popup
+      }
+
+      popup.append(kicker, title, meta, inAppRoute, directions)
       return popup
-    }
-
-    const drawSimpleRoute = (item: EventWithDistance) => {
-      if (!userCoords || !routeLayerRef.current) return
-
-      const start = L.latLng(userCoords.lat, userCoords.lng)
-      const destination = L.latLng(item.venue.coordinates.lat, item.venue.coordinates.lng)
-
-      routeLayerRef.current.clearLayers()
-      L.polyline([start, destination], {
-        className: 'simple-route-line',
-        color: '#32c3ff',
-        weight: 5,
-        opacity: 0.92,
-        dashArray: '10 12',
-        lineCap: 'round',
-      }).addTo(routeLayerRef.current)
-
-      L.circleMarker(start, {
-        className: 'simple-route-start',
-        radius: 8,
-        color: '#fff9ef',
-        fillColor: '#32c3ff',
-        fillOpacity: 1,
-        weight: 3,
-      }).addTo(routeLayerRef.current)
-
-      L.circleMarker(destination, {
-        className: 'simple-route-finish',
-        radius: 9,
-        color: '#fff9ef',
-        fillColor: '#ff7a29',
-        fillOpacity: 1,
-        weight: 3,
-      }).addTo(routeLayerRef.current)
-
-      map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
     }
 
     const eventPopup = (item: EventWithDistance) => {
@@ -551,14 +638,17 @@ function MapPanel({
       inAppRoute.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        drawSimpleRoute(item)
+        onRequestRoute({
+          coordinates: item.venue.coordinates,
+          label: item.title,
+          detail: item.venue.name,
+          distanceMiles: item.distanceMiles,
+        })
       })
 
       if (userCoords) {
         const routeHint = document.createElement('small')
-        const miles = distanceMiles(userCoords, item.venue.coordinates)
-        const walkingMinutes = Math.max(1, Math.round(miles * 20))
-        routeHint.textContent = `Straight-line guide: ${formatDistance(miles)} | about ${walkingMinutes} min walk`
+        routeHint.textContent = 'Show route on map for walking directions that follow roads.'
         popup.append(kicker, title, meta, routeHint, inAppRoute, directions)
         return popup
       }
@@ -567,106 +657,165 @@ function MapPanel({
       return popup
     }
 
-    venues.forEach((venue) => {
-      const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
-      L.marker(venuePosition, {
-        icon: venueIcon(selectedVenueId === venue.id),
-        title: venue.name,
-      })
-        .bindPopup(venuePopup(venue), {
-          className: 'nightlife-leaflet-popup',
-          closeButton: true,
-          maxWidth: 260,
-        })
-        .on('click', () => {
-          map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
-        })
-        .addTo(layer)
-    })
+    const visiblePositions: L.LatLng[] = []
 
-    events.forEach((item, index) => {
-      const offset = (index % 5) * 0.000035
-      const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
-      const marker = L.marker(eventPosition, {
-        icon: eventIcon(selectedEventId === item.id),
-        title: item.title,
-        zIndexOffset: 500 + index,
-      })
-        .bindPopup(eventPopup(item), {
-          className: 'nightlife-leaflet-popup',
-          closeButton: true,
-          maxWidth: 260,
+    if (mapViewMode !== 'events') {
+      venues.forEach((venue) => {
+        const venuePosition = L.latLng(venue.coordinates.lat, venue.coordinates.lng)
+        visiblePositions.push(venuePosition)
+        L.marker(venuePosition, {
+          icon: venueIcon(selectedVenueId === venue.id),
+          title: venue.name,
         })
-        .on('click', () => {
+          .bindPopup(venuePopup(venue), {
+            className: 'nightlife-leaflet-popup',
+            closeButton: true,
+            maxWidth: 260,
+          })
+          .on('click', () => {
+            map.setView(venuePosition, Math.max(map.getZoom(), 17), { animate: true })
+          })
+          .addTo(layer)
+      })
+    }
+
+    if (mapViewMode !== 'pubs') {
+      events.forEach((item, index) => {
+        const offset = (index % 5) * 0.000035
+        const eventPosition = L.latLng(item.venue.coordinates.lat + offset, item.venue.coordinates.lng + offset)
+        visiblePositions.push(eventPosition)
+        const marker = L.marker(eventPosition, {
+          icon: eventIcon(selectedEventId === item.id),
+          title: item.title,
+          zIndexOffset: 500 + index,
+        })
+          .bindPopup(eventPopup(item), {
+            className: 'nightlife-leaflet-popup',
+            closeButton: true,
+            maxWidth: 260,
+          })
+          .on('click', () => {
+            map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
+          })
+          .addTo(layer)
+
+        if (selectedEventId === item.id) {
           map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
-        })
-        .addTo(layer)
-
-      if (selectedEventId === item.id) {
-        map.setView(eventPosition, Math.max(map.getZoom(), 17), { animate: true })
-        marker.openPopup()
-      }
-    })
+          marker.openPopup()
+        }
+      })
+    }
 
     if (userCoords) {
       L.marker([userCoords.lat, userCoords.lng], {
         icon: L.divIcon({
           className: 'user-avatar-marker',
-          html: '<span class="avatar-pulse"></span><span class="avatar-face"><span></span></span>',
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
+          html:
+            '<span class="avatar-pulse"></span><span class="avatar-marker-pin"><span class="avatar-marker-badge"><span class="avatar-head"></span><span class="avatar-body"></span></span></span>',
+          iconSize: [42, 56],
+          iconAnchor: [21, 52],
         }),
         title: 'You are here',
         zIndexOffset: 1200,
       }).addTo(layer)
     }
 
-    if (!hasFittedInitialMarkers.current && venues.length > 0) {
-      const bounds = L.latLngBounds(venues.map((venue) => [venue.coordinates.lat, venue.coordinates.lng]))
+    if (!hasFittedInitialMarkers.current && visiblePositions.length > 0) {
+      const bounds = L.latLngBounds(visiblePositions)
       map.fitBounds(bounds.pad(0.18), { maxZoom: 17 })
       hasFittedInitialMarkers.current = true
     }
-  }, [events, selectedEventId, selectedVenueId, userCoords, venues])
+  }, [events, mapViewMode, onRequestRoute, selectedEventId, selectedVenueId, userCoords, venues])
 
   useEffect(() => {
     const map = mapRef.current
     const routeLayer = routeLayerRef.current
     if (!map || !routeLayer) return
-
+    let active = true
     routeLayer.clearLayers()
-    if (!routeTarget || !userCoords) return
+    if (!routeTarget || !userCoords) {
+      setRouteState({ loading: false, error: null, walkingRoute: null, drivingRoute: null, drivingUnavailable: false, targetLabel: null })
+      return () => {
+        active = false
+      }
+    }
 
     const start = L.latLng(userCoords.lat, userCoords.lng)
-    const destination = L.latLng(routeTarget.venue.coordinates.lat, routeTarget.venue.coordinates.lng)
+    const destination = L.latLng(routeTarget.coordinates.lat, routeTarget.coordinates.lng)
+    setRouteState({ loading: true, error: null, walkingRoute: null, drivingRoute: null, drivingUnavailable: false, targetLabel: routeTarget.label })
 
-    L.polyline([start, destination], {
-      className: 'simple-route-line',
-      color: '#32c3ff',
-      weight: 5,
-      opacity: 0.92,
-      dashArray: '10 12',
-      lineCap: 'round',
-    }).addTo(routeLayer)
+    Promise.allSettled([
+      fetchRoute(userCoords, routeTarget.coordinates, 'walking'),
+      fetchRoute(userCoords, routeTarget.coordinates, 'driving'),
+    ])
+      .then(([walkingResult, drivingResult]) => {
+        if (!active) return
+        if (walkingResult.status !== 'fulfilled') {
+          throw walkingResult.reason instanceof Error ? walkingResult.reason : new Error('Could not load walking directions right now.')
+        }
 
-    L.circleMarker(start, {
-      className: 'simple-route-start',
-      radius: 8,
-      color: '#fff9ef',
-      fillColor: '#32c3ff',
-      fillOpacity: 1,
-      weight: 3,
-    }).addTo(routeLayer)
+        const walkingRoute = walkingResult.value
+        const rawDrivingRoute = drivingResult.status === 'fulfilled' ? drivingResult.value : null
+        const drivingLooksDuplicated =
+          rawDrivingRoute !== null &&
+          Math.abs(rawDrivingRoute.duration_seconds - walkingRoute.duration_seconds) < 1 &&
+          Math.abs(rawDrivingRoute.distance_meters - walkingRoute.distance_meters) < 1
+        const drivingRoute = drivingLooksDuplicated ? null : rawDrivingRoute
+        const routePoints = walkingRoute.geometry.map((point) => L.latLng(point.lat, point.lng))
+        if (!routePoints.length) throw new Error('No route geometry returned.')
 
-    L.circleMarker(destination, {
-      className: 'simple-route-finish',
-      radius: 9,
-      color: '#fff9ef',
-      fillColor: '#ff7a29',
-      fillOpacity: 1,
-      weight: 3,
-    }).addTo(routeLayer)
+        L.polyline(routePoints, {
+          className: 'osrm-route-line',
+          color: '#32c3ff',
+          weight: 6,
+          opacity: 0.96,
+          lineCap: 'round',
+        }).addTo(routeLayer)
 
-    map.fitBounds(L.latLngBounds([start, destination]).pad(0.25), { maxZoom: 17 })
+        L.circleMarker(start, {
+          className: 'simple-route-start',
+          radius: 8,
+          color: '#fff9ef',
+          fillColor: '#32c3ff',
+          fillOpacity: 1,
+          weight: 3,
+        }).addTo(routeLayer)
+
+        L.circleMarker(destination, {
+          className: 'simple-route-finish',
+          radius: 9,
+          color: '#fff9ef',
+          fillColor: '#ff7a29',
+          fillOpacity: 1,
+          weight: 3,
+        }).addTo(routeLayer)
+
+        map.fitBounds(L.latLngBounds(routePoints).pad(0.18), { maxZoom: 17 })
+        setRouteState({
+          loading: false,
+          error: null,
+          walkingRoute,
+          drivingRoute,
+          drivingUnavailable: drivingResult.status !== 'fulfilled' || drivingLooksDuplicated,
+          targetLabel: routeTarget.label,
+        })
+      })
+      .catch((error: Error) => {
+        if (!active) return
+        routeLayer.clearLayers()
+        setRouteState({
+          loading: false,
+          error: error.message || 'Could not load directions right now.',
+          walkingRoute: null,
+          drivingRoute: null,
+          drivingUnavailable: false,
+          targetLabel: routeTarget.label,
+        })
+      })
+
+    return () => {
+      active = false
+    }
   }, [routeTarget, userCoords])
 
   useEffect(() => {
@@ -734,6 +883,37 @@ function MapPanel({
         </form>
       </div>
 
+      <div className="map-view-toolbar">
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={mapViewMode}
+          onChange={(_, value: 'all' | 'pubs' | 'events' | null) => {
+            if (!value) return
+            setMapViewMode(value)
+          }}
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="pubs">Pubs</ToggleButton>
+          <ToggleButton value="events">Events</ToggleButton>
+        </ToggleButtonGroup>
+        <div className="map-legend">
+          <span className="map-legend-item"><span className="map-legend-dot pub-dot" />Pubs</span>
+          <span className="map-legend-item"><span className="map-legend-dot event-dot" />Events</span>
+        </div>
+      </div>
+
+      {routeState.loading ? <p className="map-route-note">Finding walking route to {routeState.targetLabel}...</p> : null}
+      {routeState.error ? <p className="map-route-note route-error">{routeState.error}</p> : null}
+      {routeState.walkingRoute && !routeState.loading ? (
+        <p className="map-route-note">
+          Walking route to {routeState.targetLabel}: {(routeState.walkingRoute.distance_meters / 1000).toFixed(1)} km | walking{' '}
+          {formatTravelMinutes(routeState.walkingRoute.duration_seconds)}
+          {routeState.drivingRoute ? ` | driving ${formatTravelMinutes(routeState.drivingRoute.duration_seconds)}` : ''}
+          {routeState.drivingUnavailable ? ' | driving estimate unavailable' : ''}
+        </p>
+      ) : null}
+
       {townResults.length ? (
         <div className="map-search-results">
           {townResults.map((result) => (
@@ -795,14 +975,37 @@ function FilterSurface({
   priceBands: string[]
   onChange: (filters: Filters) => void
 }) {
+  const nightclubType = venueTypes.find((type) => type.toLowerCase() === 'nightclub') ?? ''
+  const popularFilters = [
+    { label: 'All', target: { date: '', genre: '', venue_type: '' } },
+    { label: 'Tonight', target: { date: tonightDateValue(), genre: '', venue_type: '' } },
+    { label: 'This Weekend', target: { date: weekendDateValue(), genre: '', venue_type: '' } },
+    { label: 'Music', target: { date: '', genre: firstExistingOption(genres, ['Music', 'Live Music', 'Soul', 'Pop']), venue_type: '' } },
+    { label: 'Quiz', target: { date: '', genre: firstExistingOption(genres, ['Quiz']), venue_type: '' } },
+    {
+      label: 'Clubs & Parties',
+      target: {
+        date: '',
+        genre: nightclubType ? '' : firstExistingOption(genres, ['Dance', 'Pop']),
+        venue_type: nightclubType,
+      },
+    },
+    { label: 'Seasonal', target: { date: '', genre: firstExistingOption(genres, ['Seasonal']), venue_type: '' } },
+    { label: 'Comedy & Shows', target: { date: '', genre: firstExistingOption(genres, ['Comedy', 'Shows']), venue_type: '' } },
+    { label: 'Food & Drink', target: { date: '', genre: firstExistingOption(genres, ['Food & Drink', 'Tasting']), venue_type: '' } },
+  ]
+
+  const isActivePopularFilter = (target: { date: string; genre: string; venue_type: string }) =>
+    filters.date === target.date && filters.genre === target.genre && filters.venue_type === target.venue_type
+
   return (
     <Paper className="mui-filter-surface" component="section" elevation={0} variant="outlined">
       <Stack direction={{ md: 'row', xs: 'column' }} sx={{ alignItems: { md: 'center', xs: 'stretch' }, gap: 2, justifyContent: 'space-between', mb: 2 }}>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2 }}>
           <TuneRoundedIcon color="primary" />
           <Box>
-            <Typography sx={{ fontWeight: 800 }}>Filter the night</Typography>
-            <Typography color="text.secondary" variant="body2">Sort by vibe, spend, timing, or what is near you</Typography>
+            <Typography sx={{ fontWeight: 800 }}>Explore what's popular within Nightlife</Typography>
+            <Typography color="text.secondary" variant="body2">Quickly jump into the kind of night you are planning.</Typography>
           </Box>
         </Stack>
         <FormControlLabel
@@ -810,6 +1013,20 @@ function FilterSurface({
           label="Open now"
         />
       </Stack>
+      <Box className="popular-filter-row" role="list" aria-label="Popular nightlife filters">
+        {popularFilters.map((item) => (
+          <Button
+            key={item.label}
+            className={classNames('popular-filter-button', isActivePopularFilter(item.target) && 'active')}
+            onClick={() => onChange({ ...filters, ...item.target })}
+            role="listitem"
+            size="small"
+            variant={isActivePopularFilter(item.target) ? 'contained' : 'outlined'}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </Box>
       <Box className="mui-filter-grid">
         <TextField
           label="Date"
@@ -916,7 +1133,7 @@ function HomePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all')
   const [selectedEvent, setSelectedEvent] = useState<EventWithDistance | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<VenueWithDistance | null>(null)
-  const [routeTarget, setRouteTarget] = useState<EventWithDistance | null>(null)
+  const [routeTarget, setRouteTarget] = useState<RouteTarget | null>(null)
   const { areas, venues, events } = useDiscoveryData(filters)
 
   const venueData = useMemo(() => venues.data ?? [], [venues.data])
@@ -958,8 +1175,8 @@ function HomePage() {
   const spotlight = venuesWithDistance[0] ?? null
   const panelOpen = Boolean(selectedEvent || selectedVenue)
 
-  function showEventRouteInMap(event: EventWithDistance) {
-    setRouteTarget(event)
+  function showRouteInMap(target: RouteTarget) {
+    setRouteTarget(target)
     if (!location.coords) location.requestLocation()
     setSelectedEvent(null)
     setSelectedVenue(null)
@@ -1019,6 +1236,7 @@ function HomePage() {
             selectedVenueId={selectedVenue?.id ?? null}
             userCoords={location.coords}
             routeTarget={routeTarget}
+            onRequestRoute={showRouteInMap}
             onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
           />
         </section>
@@ -1090,7 +1308,7 @@ function HomePage() {
           selectedVenue={selectedVenue}
           hasLocation={Boolean(location.coords)}
           onClose={() => { setSelectedEvent(null); setSelectedVenue(null) }}
-          onShowEventRoute={showEventRouteInMap}
+          onShowRoute={showRouteInMap}
         />
       </div>
     </UiThemeProvider>
@@ -1201,6 +1419,11 @@ function EventPage({ eventId }: { eventId: number }) {
         {data ? (
           <section className="event-detail-grid">
             <div className="spotlight-card">
+              {data.image_url ? (
+                <figure className="event-detail-image">
+                  <img src={data.image_url} alt={`${data.title} event poster`} loading="lazy" />
+                </figure>
+              ) : null}
               <div className="section-headline"><h2>{data.title}</h2><p>{data.description}</p></div>
               <dl className="data-points">
                 <div><dt>Starts</dt><dd>{formatDateTime(data.start_at)}</dd></div>

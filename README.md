@@ -159,3 +159,113 @@ Useful options:
 - `--limit 3` checks only the first few venues while testing.
 
 This command uses Google Places Text Search with a limited field mask for place ID, display name, formatted address, coordinates, Google Maps URL, and business status.
+
+## Apify Facebook Event Import
+
+The app can import event-like posts from verified public Facebook pages using Apify's Facebook Posts Scraper.
+
+Add your Apify token to `.env`:
+
+```powershell
+APIFY_API_TOKEN=your_apify_api_token_here
+```
+
+Optional AI cleanup for more natural event text:
+
+```powershell
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_EVENT_CLEANUP_MODEL=gpt-4.1-mini
+```
+
+When `OPENAI_API_KEY` is present, imported Facebook events are cleaned with the OpenAI Responses API before they are saved. The raw parser still runs first, and uncertain AI-cleaned events keep a lower confidence score for review.
+
+Seed the starter Ballina Facebook page URLs:
+
+```powershell
+python seed_ballina_facebook_pages.py
+```
+
+Preview extracted Facebook post events without changing the database:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10
+```
+
+Inspect fetched post previews and parser hints:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --debug-posts
+```
+
+OCR for flyer images:
+
+- The importer can now OCR text from Facebook post images before deciding whether a post is an event.
+- Install Python dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+- On Windows, install Tesseract OCR and make sure `tesseract` is available in `PATH`.
+- After that, the debug output will show `"ocr_available": true` and include `ocr_preview` text for posts with images.
+
+Import as drafts for review:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --apply
+```
+
+Import and publish immediately so they show on the public page:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --apply --publish
+```
+
+Target one venue:
+
+```powershell
+python sync_facebook_events_apify.py --slug the-cot-and-cobble --apply --publish
+```
+
+Compare against the raw parser without AI cleanup:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --debug-posts --no-ai-cleanup
+```
+
+Notes:
+
+- The importer only uses public Facebook page URLs stored on venues.
+- Posts are imported only when the text looks event-related and includes an inferable date/time.
+- The importer stores the first post image URL on imported events when one is available, so event detail panels can show the flyer/poster.
+- Imported records use `source_type = facebook-apify` and `sync_status = needs-review`.
+- Apify usage may cost money depending on your plan and how many posts you request.
+
+## Facebook Page Discovery
+
+You can also search for likely Facebook pages for Ballina venues that do not have one saved yet.
+
+Preview likely matches without writing anything:
+
+```powershell
+python find_ballina_facebook_pages.py
+```
+
+Check one venue:
+
+```powershell
+python find_ballina_facebook_pages.py --slug bar-square-ballina
+```
+
+Save only confident matches:
+
+```powershell
+python find_ballina_facebook_pages.py --apply
+```
+
+Useful options:
+
+- `--all` checks venues even if they already have a Facebook URL.
+- `--min-score 0.78` raises the confidence threshold.
+- `--min-gap 0.12` requires a bigger lead over the second-best candidate.
+- `--output facebook-pages.json` writes the full report to disk.

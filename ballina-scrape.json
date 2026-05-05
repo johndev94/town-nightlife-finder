@@ -38,32 +38,6 @@
     },
     {
       "venue": {
-        "id": 7,
-        "name": "McShane's Bar Ballina",
-        "slug": "mcshanes-bar-ballina"
-      },
-      "source_url": "https://www.hotelballina.ie/mcshanes-bar/",
-      "fetched_at": "2026-04-22T14:27:41+00:00",
-      "status": "parsed",
-      "confidence": 0.85,
-      "platform": "website",
-      "events": [
-        {
-          "title": "McShane\u2019s Bar",
-          "start_at": null,
-          "end_at": null,
-          "description": "McShane\u2019s Bar here at Great National Hotel Ballina is a warm and welcoming traditional Irish pub with a vibrant atmosphere. McShane\u2019s Bar not only offers our guests and locals a wide choice of beers, wines, spirits and a selection of delicious cocktails but also fabulous and top-quality food served all day long and weekend music and entertainment. Relax and unwind with a drink and a freshly cooked meal in the cosy surrounds of the McShane\u2019s Bar. McShane\u2019s Bar Our extensive cocktail menu is sure to tickle your taste buds with a wide variety of beautifully balanced Cocktails, many blended with local spirits. Our mixologist\u2019s craft a new Cocktail of the Month experimenting with flavours and is a firm favourite with our regular customers and hotel guests. Treat yourself to sparkles by the glass with our Prosecco \u2018Frizzenti\u2019, fresh from the tap into the glass. Our wine of the month provides customers with two of the highest quality wines with detailed tasting notes and food pairing suggestions for each. Whether you are enjoying a meal, a drink after work, a night out with friends, a family break away or just out for a pint to watch the game, a great evening and night is always guaranteed at McShane\u2019s Bar. Sport at McShane\u2019s Bar If there is a big game happening, you can be sure we are showing it live in McShane\u2019s Bar. Join us in McShane\u2019s Bar for the biggest sporting fixtures whether it be Irish Rugby, GAA, Soccer, Golf you name it, in a vibrant atmosphere and all in 55\u201d HD. Live Music & Entertainment McShane\u2019s Bar is the place to be at the weekends with live music and entertainment every weekend and on selected midweek nights. Both residents and locals are always welcome. Book a table, enjoy a fine meal, relax with great company and great music. Get in Touch If you have any queries please contact us via phone or email. Phone: +353 96 23600 Email: info@hotelballina.ie",
-          "price_label": null,
-          "source_url": "https://www.hotelballina.ie/mcshanes-bar/",
-          "source_type": "website-scrape"
-        }
-      ],
-      "notes": [
-        "Extracted 1 event candidate(s) from page content."
-      ]
-    },
-    {
-      "venue": {
         "id": 6,
         "name": "Paddy Mac's Ballina",
         "slug": "paddy-macs-ballina"

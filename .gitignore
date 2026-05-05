@@ -6,6 +6,7 @@ nightlife.db
 *.db
 .env
 .venv/
+.venv313/
 venv/
 frontend/node_modules/
 frontend/dist/
