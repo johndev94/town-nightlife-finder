@@ -55,6 +55,7 @@ export type EventItem = {
   end_at: string
   price_label: string
   price_amount: number | null
+  image_url?: string | null
   venue: {
     name: string
     slug: string

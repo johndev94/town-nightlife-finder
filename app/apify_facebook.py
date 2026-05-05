@@ -121,6 +121,7 @@ class FacebookPostEvent:
     end_at: str
     price_label: str
     price_amount: float | None
+    image_url: str | None
     source_url: str | None
     confidence: float
     post_text: str
@@ -173,6 +174,7 @@ def extract_events_from_posts(posts: list[dict[str, Any]], venue_name: str, refe
         title = infer_title(text, venue_name)
         price_label, price_amount = infer_price(text)
         genre = infer_genre(text)
+        image_urls = collect_post_image_urls(post)
         key = (title.lower(), start_at)
         if key in seen:
             continue
@@ -189,6 +191,7 @@ def extract_events_from_posts(posts: list[dict[str, Any]], venue_name: str, refe
                 end_at=end.isoformat(timespec="minutes"),
                 price_label=price_label or "TBC",
                 price_amount=price_amount,
+                image_url=image_urls[0] if image_urls else None,
                 source_url=post_url(post),
                 confidence=0.78 if price_label else 0.7,
                 post_text=normalize_display_text(text),

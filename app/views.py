@@ -188,6 +188,7 @@ def format_event(row):
         "end_at": row["end_at"],
         "price_label": row["price_label"],
         "price_amount": row["price_amount"],
+        "image_url": row["image_url"] if "image_url" in row.keys() else None,
         "venue": {"name": row["venue_name"], "slug": row["venue_slug"], "type": row["venue_type"], "address": row["address"], "price_band": row["price_band"], "opens_at": row["opens_at"], "closes_at": row["closes_at"], "coordinates": {"lat": row["latitude"], "lng": row["longitude"]}, "area": {"name": row["area_name"], "slug": row["area_slug"]}},
         "source": {"type": row["source_type"], "url": row["source_url"], "status": row["sync_status"], "confidence": row["confidence"], "last_verified_at": row["last_verified_at"]},
     }

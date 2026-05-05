@@ -344,6 +344,11 @@ function SidePanel({
         <p className="side-panel-copy">
           {selectedEvent ? selectedEvent.description : selectedVenue?.description}
         </p>
+        {selectedEvent?.image_url ? (
+          <figure className="event-panel-image">
+            <img src={selectedEvent.image_url} alt={`${selectedEvent.title} event poster`} loading="lazy" />
+          </figure>
+        ) : null}
         <div className="side-stat-grid">
           <div>
             <strong>{formatDistance(distance)}</strong>
@@ -1414,6 +1419,11 @@ function EventPage({ eventId }: { eventId: number }) {
         {data ? (
           <section className="event-detail-grid">
             <div className="spotlight-card">
+              {data.image_url ? (
+                <figure className="event-detail-image">
+                  <img src={data.image_url} alt={`${data.title} event poster`} loading="lazy" />
+                </figure>
+              ) : null}
               <div className="section-headline"><h2>{data.title}</h2><p>{data.description}</p></div>
               <dl className="data-points">
                 <div><dt>Starts</dt><dd>{formatDateTime(data.start_at)}</dd></div>

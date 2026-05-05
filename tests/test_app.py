@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from app import create_app
+from app.db import get_db, init_db
 
 
 class NightlifeFinderTestCase(unittest.TestCase):
@@ -41,6 +42,17 @@ class NightlifeFinderTestCase(unittest.TestCase):
         self.assertEqual(payload["title"], "Karaoke Night")
         self.assertIn("coordinates", payload["venue"])
         self.assertIn("lat", payload["venue"]["coordinates"])
+        self.assertIn("image_url", payload)
+
+    def test_event_detail_api_includes_image_url(self):
+        with self.app.app_context():
+            init_db()
+            get_db().execute("UPDATE events SET image_url = ? WHERE id = 1", ("https://cdn.example.com/flyer.jpg",))
+            get_db().commit()
+
+        response = self.client.get("/api/events/1")
+
+        self.assertEqual(response.get_json()["image_url"], "https://cdn.example.com/flyer.jpg")
 
     def test_event_page_route_exists(self):
         response = self.client.get("/events/1")

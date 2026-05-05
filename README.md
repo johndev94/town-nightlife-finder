@@ -170,6 +170,15 @@ Add your Apify token to `.env`:
 APIFY_API_TOKEN=your_apify_api_token_here
 ```
 
+Optional AI cleanup for more natural event text:
+
+```powershell
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_EVENT_CLEANUP_MODEL=gpt-4.1-mini
+```
+
+When `OPENAI_API_KEY` is present, imported Facebook events are cleaned with the OpenAI Responses API before they are saved. The raw parser still runs first, and uncertain AI-cleaned events keep a lower confidence score for review.
+
 Seed the starter Ballina Facebook page URLs:
 
 ```powershell
@@ -218,10 +227,17 @@ Target one venue:
 python sync_facebook_events_apify.py --slug the-cot-and-cobble --apply --publish
 ```
 
+Compare against the raw parser without AI cleanup:
+
+```powershell
+python sync_facebook_events_apify.py --area ballina-town --posts-per-page 10 --debug-posts --no-ai-cleanup
+```
+
 Notes:
 
 - The importer only uses public Facebook page URLs stored on venues.
 - Posts are imported only when the text looks event-related and includes an inferable date/time.
+- The importer stores the first post image URL on imported events when one is available, so event detail panels can show the flyer/poster.
 - Imported records use `source_type = facebook-apify` and `sync_status = needs-review`.
 - Apify usage may cost money depending on your plan and how many posts you request.
 

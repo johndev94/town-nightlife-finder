@@ -22,6 +22,20 @@ class ApifyFacebookTestCase(unittest.TestCase):
         self.assertEqual(events[0].price_amount, 0)
         self.assertEqual(events[0].start_at, "2026-05-01T21:00")
 
+    def test_extracts_first_post_image_url_for_event(self):
+        posts = [
+            {
+                "text": "Live music this Friday 9pm with free entry all night.",
+                "url": "https://facebook.com/example/posts/1",
+                "time": "2026-05-01T10:00:00+00:00",
+                "media": [{"image": {"url": "https://cdn.example.com/flyer.jpg"}}],
+            }
+        ]
+
+        events = extract_events_from_posts(posts, "Rouse's Bar", reference_date=datetime(2026, 5, 1, tzinfo=UTC))
+
+        self.assertEqual(events[0].image_url, "https://cdn.example.com/flyer.jpg")
+
     def test_nightlife_time_bias_treats_tonight_1030_as_evening(self):
         posts = [
             {

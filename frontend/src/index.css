@@ -1380,6 +1380,33 @@ body[data-theme="dark"] .mui-card-facts svg {
   line-height: 1.65;
 }
 
+.event-panel-image,
+.event-detail-image {
+  margin: 14px 0 18px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.06);
+}
+
+.event-panel-image img,
+.event-detail-image img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  object-position: center top;
+  background: rgba(8, 15, 31, 0.04);
+}
+
+.event-detail-image {
+  margin-top: 0;
+}
+
+.event-detail-image img {
+  max-height: 460px;
+}
+
 .side-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 
 from app import create_app
+from app.ai_event_cleaner import ai_cleanup_enabled, clean_event_with_ai
 from app.apify_facebook import (
     build_event_description,
     collect_post_image_urls,
@@ -21,7 +22,7 @@ from app.apify_facebook import (
     post_text,
     run_facebook_posts_scraper,
 )
-from app.db import get_db
+from app.db import get_db, init_db
 
 
 def load_env_file(path: Path = Path(".env")) -> None:
@@ -46,6 +47,7 @@ def main() -> None:
     parser.add_argument("--output", help="Optional JSON report path.")
     parser.add_argument("--debug-posts", action="store_true", help="Include fetched post previews and parser hints in the report.")
     parser.add_argument("--debug-post-limit", type=int, default=5, help="How many posts per venue to include in debug output.")
+    parser.add_argument("--no-ai-cleanup", action="store_true", help="Disable OpenAI event text cleanup for this run.")
     args = parser.parse_args()
 
     load_env_file()
@@ -58,6 +60,7 @@ def main() -> None:
     imported = 0
 
     with app.app_context():
+        init_db()
         venues = load_facebook_venues(args.area, args.slug)
         if not venues:
             raise SystemExit("No venues with Facebook page URLs were found for that selection.")
@@ -79,6 +82,26 @@ def main() -> None:
                 )
                 venue_report["posts_fetched"] = len(posts)
                 events = extract_events_from_posts(posts, venue["name"])
+                ai_used = False
+                if not args.no_ai_cleanup and ai_cleanup_enabled():
+                    for event in events:
+                        try:
+                            cleaned = clean_event_with_ai(event.to_dict(), venue["name"], event.post_text, image_url=event.image_url)
+                        except requests.RequestException as exc:
+                            venue_report["ai_cleanup_error"] = str(exc)
+                            cleaned = None
+                        if cleaned is None:
+                            continue
+                        event.title = cleaned.title
+                        event.description = cleaned.description
+                        event.genre = cleaned.genre
+                        event.price_label = cleaned.price_label
+                        event.price_amount = cleaned.price_amount
+                        event.confidence = min(1.0, (event.confidence + cleaned.confidence) / 2)
+                        if cleaned.needs_review:
+                            event.confidence = min(event.confidence, 0.62)
+                        ai_used = True
+                venue_report["ai_cleanup"] = ai_used
                 venue_report["status"] = "parsed"
                 venue_report["events"] = [event.to_dict() for event in events]
                 if args.debug_posts:
@@ -95,7 +118,14 @@ def main() -> None:
         if args.apply:
             get_db().commit()
 
-    payload = {"checked": len(report), "imported": imported, "applied": args.apply, "published": args.publish, "results": report}
+    payload = {
+        "checked": len(report),
+        "imported": imported,
+        "applied": args.apply,
+        "published": args.publish,
+        "ai_cleanup_available": ai_cleanup_enabled() and not args.no_ai_cleanup,
+        "results": report,
+    }
     payload["ocr_available"] = ocr_is_available()
     output = json.dumps(payload, indent=2)
     if args.output:
@@ -144,6 +174,7 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
         event.end_at,
         event.price_label,
         event.price_amount,
+        event.image_url,
         1 if publish else 0,
         event.source_url,
         event.confidence,
@@ -156,7 +187,7 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
         db.execute(
             """
             UPDATE events
-            SET description = ?, genre = ?, end_at = ?, price_label = ?, price_amount = ?,
+            SET description = ?, genre = ?, end_at = ?, price_label = ?, price_amount = ?, image_url = ?,
                 currency = 'EUR', is_published = ?, source_type = 'facebook-apify',
                 source_url = ?, sync_status = 'needs-review', confidence = ?, last_verified_at = ?
             WHERE venue_id = ? AND LOWER(title) = LOWER(?) AND start_at = ?
@@ -170,10 +201,10 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
         INSERT INTO events
         (
             venue_id, title, description, genre, start_at, end_at, price_label,
-            price_amount, currency, is_published, source_type, source_url,
+            price_amount, image_url, currency, is_published, source_type, source_url,
             sync_status, confidence, last_verified_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EUR', ?, 'facebook-apify', ?, 'needs-review', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'EUR', ?, 'facebook-apify', ?, 'needs-review', ?, ?)
         """,
         (
             venue_id,
@@ -184,6 +215,7 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
             event.end_at,
             event.price_label,
             event.price_amount,
+            event.image_url,
             1 if publish else 0,
             event.source_url,
             event.confidence,
