@@ -39,6 +39,7 @@ import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 
 import { fetchRoute, initialConfig, useDiscoveryData, useEventDetail, useVenueDetail } from './api'
+import { IRELAND_COUNTIES, IRELAND_LOCATIONS, type IrelandCounty, type IrelandTown } from './irelandLocations'
 import { classNames, DAY_LABELS, distanceMiles, formatDateTime, formatDistance, mapsUrl } from './lib'
 import type { Area, Coords, EventWithDistance, Filters, RouteResponse, Theme, VenueWithDistance } from './types'
 
@@ -70,6 +71,23 @@ const DEFAULT_TOWN = {
   label: 'Ballina, Co. Mayo',
   coords: { lat: 54.1159, lng: -9.1536 },
 }
+
+const EMPTY_BOUNDS_FILTERS = {
+  bounds_north: '',
+  bounds_south: '',
+  bounds_east: '',
+  bounds_west: '',
+}
+
+function irelandTownId(town: Pick<IrelandTown, 'name' | 'lat' | 'lng'>) {
+  return `${town.name}|${town.lat}|${town.lng}`
+}
+
+function isIrelandCounty(value: string): value is IrelandCounty {
+  return value in IRELAND_LOCATIONS
+}
+
+const DEFAULT_IRELAND_LOCATION = IRELAND_LOCATIONS.Mayo?.find((town) => town.name === 'Ballina')
 
 function formatTravelMinutes(seconds: number) {
   return `${Math.max(1, Math.round(seconds / 60))} min`
@@ -471,6 +489,7 @@ function MapPanel({
   routeTarget,
   onRequestRoute,
   onSelectArea,
+  onSelectLocation,
 }: {
   areas: Area[]
   venues: VenueWithDistance[]
@@ -482,6 +501,7 @@ function MapPanel({
   routeTarget: RouteTarget | null
   onRequestRoute: (target: RouteTarget) => void
   onSelectArea: (slug: string) => void
+  onSelectLocation: (town: IrelandTown) => void
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -500,7 +520,10 @@ function MapPanel({
   const [townQuery, setTownQuery] = useState('')
   const [townResults, setTownResults] = useState<TownSearchResult[]>([])
   const [selectedTown, setSelectedTown] = useState(DEFAULT_TOWN.label)
+  const [selectedCounty, setSelectedCounty] = useState<IrelandCounty>('Mayo')
+  const [selectedTownId, setSelectedTownId] = useState(DEFAULT_IRELAND_LOCATION ? irelandTownId(DEFAULT_IRELAND_LOCATION) : '')
   const [townSearchStatus, setTownSearchStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle')
+  const countyTowns = IRELAND_LOCATIONS[selectedCounty] ?? []
 
   useEffect(() => {
     if (!mapElementRef.current || mapRef.current) return
@@ -825,6 +848,29 @@ function MapPanel({
     setSelectedTown(area.name)
   }, [areas, selectedArea])
 
+  function selectIrelandLocation(town: IrelandTown) {
+    if (isIrelandCounty(town.county)) setSelectedCounty(town.county)
+    setSelectedTownId(irelandTownId(town))
+    setSelectedTown(`${town.name}, Co. ${town.county}`)
+    setTownResults([])
+    setTownQuery('')
+    mapRef.current?.fitBounds(
+      [
+        [town.bounds.south, town.bounds.west],
+        [town.bounds.north, town.bounds.east],
+      ],
+      { maxZoom: 16 },
+    )
+    onSelectLocation(town)
+  }
+
+  function chooseCounty(county: IrelandCounty) {
+    setSelectedCounty(county)
+    setSelectedTownId('')
+    setTownResults([])
+    setTownQuery('')
+  }
+
   async function searchIrelandTown(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const query = townQuery.trim()
@@ -853,10 +899,35 @@ function MapPanel({
     const lng = Number(result.lon)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
 
-    mapRef.current?.setView([lat, lng], 16, { animate: true })
-    setSelectedTown(result.display_name.split(',').slice(0, 3).join(', '))
+    const [south, north, west, east] = result.boundingbox?.map(Number) ?? []
+    const bounds =
+      [north, south, east, west].every(Number.isFinite)
+        ? { north, south, east, west }
+        : { north: lat + 0.035, south: lat - 0.035, east: lng + 0.035, west: lng - 0.035 }
+    const labelParts = result.display_name.split(',').map((part) => part.trim())
+    const displayName = labelParts.slice(0, 3).join(', ')
+    const county = labelParts.find((part) => part.startsWith('County '))?.replace('County ', '') ?? 'Ireland'
+    const town: IrelandTown = {
+      name: labelParts[0] ?? displayName,
+      county,
+      type: 'town',
+      lat,
+      lng,
+      bounds,
+    }
+
+    mapRef.current?.fitBounds(
+      [
+        [bounds.south, bounds.west],
+        [bounds.north, bounds.east],
+      ],
+      { maxZoom: 16 },
+    )
+    setSelectedTown(displayName)
+    setSelectedTownId('')
     setTownResults([])
     setTownQuery('')
+    onSelectLocation(town)
   }
 
   return (
@@ -871,6 +942,41 @@ function MapPanel({
           <span className="map-eyebrow">Viewing</span>
           <strong>{selectedTown}</strong>
         </div>
+        <Box className="map-location-selectors">
+          <FormControl className="map-location-field" size="small">
+            <InputLabel id="county-select-label">County</InputLabel>
+            <Select
+              label="County"
+              labelId="county-select-label"
+              value={selectedCounty}
+              onChange={(event) => chooseCounty(String(event.target.value) as IrelandCounty)}
+            >
+              {IRELAND_COUNTIES.map((county) => (
+                <MenuItem key={county} value={county}>{county}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl className="map-location-field" size="small">
+            <InputLabel id="town-select-label">Town</InputLabel>
+            <Select
+              displayEmpty
+              label="Town"
+              labelId="town-select-label"
+              value={selectedTownId}
+              onChange={(event) => {
+                const town = countyTowns.find((item) => irelandTownId(item) === String(event.target.value))
+                if (town) selectIrelandLocation(town)
+              }}
+            >
+              <MenuItem value="">Choose a town</MenuItem>
+              {countyTowns.map((town) => (
+                <MenuItem key={irelandTownId(town)} value={irelandTownId(town)}>
+                  {town.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         <form className="map-search" onSubmit={searchIrelandTown}>
           <input
             type="search"
@@ -1123,6 +1229,7 @@ function HomePage() {
   const location = useCurrentLocation()
   const [filters, setFilters] = useState<Filters>({
     area: '',
+    ...EMPTY_BOUNDS_FILTERS,
     genre: '',
     venue_type: '',
     price_band: '',
@@ -1237,7 +1344,17 @@ function HomePage() {
             userCoords={location.coords}
             routeTarget={routeTarget}
             onRequestRoute={showRouteInMap}
-            onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug }))}
+            onSelectArea={(slug) => setFilters((current) => ({ ...current, area: slug, ...EMPTY_BOUNDS_FILTERS }))}
+            onSelectLocation={(town) =>
+              setFilters((current) => ({
+                ...current,
+                area: '',
+                bounds_north: String(town.bounds.north),
+                bounds_south: String(town.bounds.south),
+                bounds_east: String(town.bounds.east),
+                bounds_west: String(town.bounds.west),
+              }))
+            }
           />
         </section>
         <FilterSurface filters={filters} genres={genres} priceBands={priceBands} venueTypes={venueTypes} onChange={setFilters} />

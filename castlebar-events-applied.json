@@ -1,0 +1,89 @@
+{
+  "checked": 5,
+  "imported": 1,
+  "applied": true,
+  "published": true,
+  "ai_cleanup_available": true,
+  "results": [
+    {
+      "venue": {
+        "id": 28,
+        "name": "Bar One",
+        "slug": "bar-one"
+      },
+      "facebook_url": "https://www.facebook.com/barone.ie/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 29,
+        "name": "Bridge St Bar",
+        "slug": "bridge-st-bar"
+      },
+      "facebook_url": "https://www.facebook.com/bridgestreetbarcastlebar/",
+      "status": "parsed",
+      "events": [
+        {
+          "title": "Mn \u00e1 Mn \u00e1 Live Jazz at Bridge St Bar",
+          "description": "Jazz quartet Mn \u00e1 Mn \u00e1 performs standards, originals, and beloved classics at Bridge St Bar, Castlebar on May 15, 8:30 PM. Tickets via Eventbrite.",
+          "genre": "Live Music",
+          "start_at": "2026-05-15T20:30",
+          "end_at": "2026-05-15T23:30",
+          "price_label": "TBC",
+          "price_amount": null,
+          "image_url": "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/677822054_1591733676290454_1199747938853436689_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_ohc=VPYiRE9OPv4Q7kNvwFGN1ff&_nc_oc=Adp8Dnub3FyhwV2euqS3ZtyuB_H1ktgDYIWxdN7gz3WoC8QCGh-co6nkFC7jZ0aub3s&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=E2s7FLKk1LCxzOJopYs8jw&_nc_ss=72289&oh=00_Af4XECDkqGkAnpvo10YrYrLZw2_hOawsO_m4_71Ee4ubbA&oe=6A000940",
+          "source_url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid0v1bACy6atpkHpdHY55wbRiG4K8AjcNZeM7cXzZRfjMNW5h5bfHkfKooTdzPVeRwfl",
+          "confidence": 0.62,
+          "post_text": "Mn\u00e1 Mn\u00e1 Next Gig bridge street (upstairs) Castlebar Friday May 15 th 8.30 pm. Follow link below for tickets/donations at Eventbrite We are \"Mn\u00e1 Mn\u00e1\" - 4 women from the Westport area who have got together to play jazz - voice, double bass, soxophone and piano. Our repertoire is made up of jazz standards, originals composed by songwriters in the band and a couple of surprise tunes we include because we love them! https://www.eventbrite.ie/e/mna-mna-tickets-1986720765290?aff=oddtdtcreator&keep tld=true \\\\\\\\ Standards \u2018ml * any Originals Rs Beloved oS Se DA Classics Yo oe le New pot, bridge st : sani May 15\" iN Coe 8.30 PM >> RH sn \u00bb\u00bb NS \u00e9\u00e9 4 Z a \\\\ <4 i% iS r"
+        }
+      ],
+      "error": null,
+      "posts_fetched": 10,
+      "ai_cleanup": true
+    },
+    {
+      "venue": {
+        "id": 30,
+        "name": "Bungalow Bar",
+        "slug": "bungalow-bar"
+      },
+      "facebook_url": "https://www.facebook.com/Bungalowbar21/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 4,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 41,
+        "name": "Rocky's",
+        "slug": "rocky-s"
+      },
+      "facebook_url": "https://www.facebook.com/rockyscastlebar/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 1,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 46,
+        "name": "The Ellison",
+        "slug": "the-ellison"
+      },
+      "facebook_url": "https://www.facebook.com/theellisonhotel/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 10,
+      "ai_cleanup": false
+    }
+  ],
+  "ocr_available": true
+}

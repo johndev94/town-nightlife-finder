@@ -1,0 +1,63 @@
+{
+  "checked": 1,
+  "imported": 0,
+  "applied": false,
+  "published": false,
+  "ai_cleanup_available": false,
+  "results": [
+    {
+      "venue": {
+        "id": 5,
+        "name": "Bar Square",
+        "slug": "bar-square-ballina"
+      },
+      "facebook_url": "https://www.facebook.com/barsquareballina/",
+      "status": "parsed",
+      "events": [
+        {
+          "title": "Quiz night at Bar Square",
+          "description": "DJ Baldy Mick is back in Bar Square tonight as always on a Tuesday night with his fun Pub Table Quiz, join him for team registration from 8.30 PM, Quiz starts at 9 PM Bar Square @barsquare DJ Baldy Mick @djbaldymick @partytimeevents. 4 BAR Square Tuesdays 9 PM \u00b0\u00b0 Ss =r) j oN ro) s Ni i \u00a5\u00a5 )) Prizes To Bewon AS DJ Baldy Mick",
+          "genre": "Quiz",
+          "start_at": "2026-05-05T20:30",
+          "end_at": "2026-05-05T23:30",
+          "price_label": "TBC",
+          "price_amount": null,
+          "image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t39.30808-6/689252646_1563336109133235_5200623569505716260_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=110&ccb=1-7&_nc_sid=13d280&_nc_ohc=eQatE_Jk3RIQ7kNvwHJ7lLW&_nc_oc=AdomZV6NW73bIs5ym6UTuofkJml6slFeUIsLKBtx0fg4_idp9uQuVQe1WZ6-ebk0JRw&_nc_zt=23&_nc_ht=scontent-iad3-1.xx&_nc_gid=eQjxr8TpDo9sRzym9IWi3w&_nc_ss=72289&oh=00_Af4rr4DBDqfUWtBAbi5G4JqRWtFXT9DdWh1VI_k2uaGBeQ&oe=6A02D9D3",
+          "source_url": "https://www.facebook.com/barsquareballina/posts/pfbid0khf1vgc8ZGin6WchSS8r42qbmNDFZLG4BDPNvCR6g5F4qDahP6wrcoh1emeJj3d7l",
+          "confidence": 0.7,
+          "post_text": "DJ Baldy Mick is back in Bar Square tonight as always on a Tuesday night with his fun Pub Table Quiz, join him for team registration from 8.30 PM, Quiz starts at 9 PM Bar Square @barsquare DJ Baldy Mick @djbaldymick @partytimeevents 4 BAR Square Tuesdays 9 PM \u00b0\u00b0 Ss =r) j oN ro) s Ni i \u00a5\u00a5 )) Prizes To Bewon AS DJ Baldy Mick"
+        }
+      ],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/reel/1878948809470428/",
+          "timestamp": "2026-05-06T17:28:54.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-iad3-2.xx.fbcdn.net/v/t51.71878-10/689000415_1011691054758405_256237920150581969_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=111&ccb=1-7&_nc_sid=5fad0e&_nc_ohc=o2y8PihUy3cQ7kNvwFxgQhP&_nc_oc=Adrs0GW7C8j3KjuQVJfzLr7hEt3DKx4696UdK0_DDL5JWW53QOC-hV9ZAidj_mCxFlw&_nc_zt=23&_nc_ht=scontent-iad3-2.xx&_nc_gid=eQjxr8TpDo9sRzym9IWi3w&_nc_ss=72289&oh=00_Af7OaA2Eu9fx_a4yx_fj-_9_YwgKR5QVUkgBZKEpF7LRJQ&oe=6A02D563"
+          ],
+          "ocr_preview": "i \u00a5\u00a5 - \u2014\u2014 q ot Cal re r ' ol ae \u00a5\u00a5 \u2014\u2014 a \u2014\u2014 Q a. Yebarcs",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": "We've been voted the best burger in Ballina by @restauratguru \ud83c\udf54\u2665\ufe0f\ud83c\udf54\u2665\ufe0f\ud83c\udf54\u2665\ufe0f\ud83c\udf54\u2665\ufe0f Pop in and try one!. i \u00a5\u00a5\u00a5\u00a5 - \u2014\u2014\u2014\u2014 q ot Cal re r ' ol ae \u00a5\u00a5\u00a5\u00a5 \u2014\u2014\u2014\u2014 a \u2014\u2014\u2014\u2014 Q a. Yebarcs"
+        },
+        {
+          "url": "https://www.facebook.com/barsquareballina/posts/pfbid0khf1vgc8ZGin6WchSS8r42qbmNDFZLG4BDPNvCR6g5F4qDahP6wrcoh1emeJj3d7l",
+          "timestamp": "2026-05-05T15:11:35.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-iad3-1.xx.fbcdn.net/v/t39.30808-6/689252646_1563336109133235_5200623569505716260_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=110&ccb=1-7&_nc_sid=13d280&_nc_ohc=eQatE_Jk3RIQ7kNvwHJ7lLW&_nc_oc=AdomZV6NW73bIs5ym6UTuofkJml6slFeUIsLKBtx0fg4_idp9uQuVQe1WZ6-ebk0JRw&_nc_zt=23&_nc_ht=scontent-iad3-1.xx&_nc_gid=eQjxr8TpDo9sRzym9IWi3w&_nc_ss=72289&oh=00_Af4rr4DBDqfUWtBAbi5G4JqRWtFXT9DdWh1VI_k2uaGBeQ&oe=6A02D9D3"
+          ],
+          "ocr_preview": "4 BAR Square Tuesdays 9 PM \u00b0\u00b0 Ss =r) j oN ro) s Ni i \u00a5\u00a5 )) Prizes To Bewon AS DJ Baldy Mick",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-05T20:30",
+          "preview": "DJ Baldy Mick is back in Bar Square tonight as always on a Tuesday night with his fun Pub Table Quiz, join him for team registration from 8.30 PM, Quiz starts at 9 PM Bar Square @barsquare DJ Baldy Mick @djbaldymick @partytimeevents. 4 BAR Square Tuesdays 9 PM \u00b0\u00b0\u00b0\u00b0 Ss =r) j oN ro"
+        }
+      ]
+    }
+  ],
+  "ocr_available": true
+}

@@ -1,0 +1,529 @@
+{
+  "checked": 21,
+  "applied": 5,
+  "min_score": 0.68,
+  "min_gap": 0.04,
+  "results": [
+    {
+      "venue": {
+        "id": 28,
+        "name": "Bar One",
+        "slug": "bar-one"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/barone.ie/",
+        "title": "Bar One Castlebar | Public House and Eatery",
+        "snippet": "Linked from http://www.barone.ie/",
+        "score": 1.0,
+        "reasons": [
+          "exact venue name",
+          "1/1 venue tokens",
+          "1/1 URL slug tokens",
+          "mentions Castlebar",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/barone.ie/",
+          "title": "Bar One Castlebar | Public House and Eatery",
+          "snippet": "Linked from http://www.barone.ie/",
+          "score": 1.0,
+          "reasons": [
+            "exact venue name",
+            "1/1 venue tokens",
+            "1/1 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 29,
+        "name": "Bridge St Bar",
+        "slug": "bridge-st-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/bridgestreetbarcastlebar/",
+        "title": "bridge st",
+        "snippet": "Linked from http://www.bridgest.ie/",
+        "score": 1.0,
+        "reasons": [
+          "2/2 venue tokens",
+          "2/2 URL slug tokens",
+          "mentions Castlebar",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/",
+          "title": "bridge st",
+          "snippet": "Linked from http://www.bridgest.ie/",
+          "score": 1.0,
+          "reasons": [
+            "2/2 venue tokens",
+            "2/2 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/castlebarcomedyclub/",
+          "title": "bridge st",
+          "snippet": "Linked from http://www.bridgest.ie/",
+          "score": 0.958,
+          "reasons": [
+            "2/2 venue tokens",
+            "1/2 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/bridgeofsongmayo/",
+          "title": "bridge st",
+          "snippet": "Linked from http://www.bridgest.ie/",
+          "score": 0.891,
+          "reasons": [
+            "2/2 venue tokens",
+            "1/2 URL slug tokens",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 30,
+        "name": "Bungalow Bar",
+        "slug": "bungalow-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/Bungalowbar21/",
+        "title": "Bungalow Bar",
+        "snippet": "Facebook URL from venue website field for Castlebar",
+        "score": 1.0,
+        "reasons": [
+          "exact venue name",
+          "1/1 venue tokens",
+          "1/1 URL slug tokens",
+          "mentions Castlebar",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/Bungalowbar21/",
+          "title": "Bungalow Bar",
+          "snippet": "Facebook URL from venue website field for Castlebar",
+          "score": 1.0,
+          "reasons": [
+            "exact venue name",
+            "1/1 venue tokens",
+            "1/1 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 31,
+        "name": "Club Mantra",
+        "slug": "club-mantra"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 32,
+        "name": "Coadys Bar",
+        "slug": "coadys-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 33,
+        "name": "Flynn's Bar",
+        "slug": "flynn-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 34,
+        "name": "Garbos Venue, Live music and Party Venue",
+        "slug": "garbos-venue-live-music-and-party-venue"
+      },
+      "existing_facebook_url": null,
+      "status": "ambiguous",
+      "selected": null,
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/HogsHeaven/",
+          "title": "Garbos Night Venue | Live Music Castlebar | Castlebar Party Venue",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/garbos-night-venue/",
+          "score": 0.781,
+          "reasons": [
+            "6/7 venue tokens",
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/815784405149194/",
+          "title": "Garbos Night Venue | Live Music Castlebar | Castlebar Party Venue",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/garbos-night-venue/",
+          "score": 0.777,
+          "reasons": [
+            "6/7 venue tokens",
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/613125695530340/",
+          "title": "Garbos Night Venue | Live Music Castlebar | Castlebar Party Venue",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/garbos-night-venue/",
+          "score": 0.777,
+          "reasons": [
+            "6/7 venue tokens",
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/349149725190026/",
+          "title": "Garbos Night Venue | Live Music Castlebar | Castlebar Party Venue",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/garbos-night-venue/",
+          "score": 0.777,
+          "reasons": [
+            "6/7 venue tokens",
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/484986114900064/",
+          "title": "Garbos Night Venue | Live Music Castlebar | Castlebar Party Venue",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/garbos-night-venue/",
+          "score": 0.777,
+          "reasons": [
+            "6/7 venue tokens",
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 35,
+        "name": "Hogs Heaven",
+        "slug": "hogs-heaven"
+      },
+      "existing_facebook_url": null,
+      "status": "ambiguous",
+      "selected": null,
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/815784405149194/",
+          "title": "Mayo Leisure Point | Things To Do in Castlebar | Things to do in Mayo",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/",
+          "score": 0.43,
+          "reasons": [
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/613125695530340/",
+          "title": "Mayo Leisure Point | Things To Do in Castlebar | Things to do in Mayo",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/",
+          "score": 0.43,
+          "reasons": [
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/349149725190026/",
+          "title": "Mayo Leisure Point | Things To Do in Castlebar | Things to do in Mayo",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/",
+          "score": 0.43,
+          "reasons": [
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/484986114900064/",
+          "title": "Mayo Leisure Point | Things To Do in Castlebar | Things to do in Mayo",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/",
+          "score": 0.43,
+          "reasons": [
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        },
+        {
+          "url": "https://www.facebook.com/498166556885893/",
+          "title": "Mayo Leisure Point | Things To Do in Castlebar | Things to do in Mayo",
+          "snippet": "Linked from http://www.mayoleisurepoint.ie/",
+          "score": 0.43,
+          "reasons": [
+            "mentions Castlebar",
+            "mentions Mayo",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 36,
+        "name": "John McHale",
+        "slug": "john-mchale"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 37,
+        "name": "Mick Byrne's Bar",
+        "slug": "mick-byrne-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 38,
+        "name": "Paddy Morans Pub",
+        "slug": "paddy-morans-pub"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 39,
+        "name": "Prendergast Bar",
+        "slug": "prendergast-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 40,
+        "name": "Ray's bar",
+        "slug": "ray-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 41,
+        "name": "Rocky's",
+        "slug": "rocky-s"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/rockyscastlebar/",
+        "title": "Rocky's",
+        "snippet": "Facebook URL from venue website field for Castlebar",
+        "score": 1.0,
+        "reasons": [
+          "exact venue name",
+          "2/2 venue tokens",
+          "2/2 URL slug tokens",
+          "mentions Castlebar",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/rockyscastlebar/",
+          "title": "Rocky's",
+          "snippet": "Facebook URL from venue website field for Castlebar",
+          "score": 1.0,
+          "reasons": [
+            "exact venue name",
+            "2/2 venue tokens",
+            "2/2 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 42,
+        "name": "The Barrel & Castle",
+        "slug": "the-barrel-castle"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 43,
+        "name": "The Bodhran",
+        "slug": "the-bodhran"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 44,
+        "name": "The Castle Inn",
+        "slug": "the-castle-inn"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 45,
+        "name": "The Cobweb Bar",
+        "slug": "the-cobweb-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 46,
+        "name": "The Ellison",
+        "slug": "the-ellison"
+      },
+      "existing_facebook_url": null,
+      "status": "applied",
+      "selected": {
+        "url": "https://www.facebook.com/theellisonhotel/",
+        "title": "The Ellison Hotel | 4 Star Hotel in Castlebar. Formerly Harlequin",
+        "snippet": "Linked from https://www.theellisonhotel.ie/",
+        "score": 1.0,
+        "reasons": [
+          "exact venue name",
+          "1/1 venue tokens",
+          "1/1 URL slug tokens",
+          "mentions Castlebar",
+          "found on official website"
+        ]
+      },
+      "candidates": [
+        {
+          "url": "https://www.facebook.com/theellisonhotel/",
+          "title": "The Ellison Hotel | 4 Star Hotel in Castlebar. Formerly Harlequin",
+          "snippet": "Linked from https://www.theellisonhotel.ie/",
+          "score": 1.0,
+          "reasons": [
+            "exact venue name",
+            "1/1 venue tokens",
+            "1/1 URL slug tokens",
+            "mentions Castlebar",
+            "found on official website"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 47,
+        "name": "The Irish House Bar",
+        "slug": "the-irish-house-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    },
+    {
+      "venue": {
+        "id": 48,
+        "name": "Tolster's Bar",
+        "slug": "tolster-s-bar"
+      },
+      "existing_facebook_url": null,
+      "status": "no-match",
+      "selected": null,
+      "candidates": [],
+      "error": null
+    }
+  ]
+}

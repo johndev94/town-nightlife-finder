@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,6 +50,7 @@ def main() -> None:
     parser.add_argument("--debug-posts", action="store_true", help="Include fetched post previews and parser hints in the report.")
     parser.add_argument("--debug-post-limit", type=int, default=5, help="How many posts per venue to include in debug output.")
     parser.add_argument("--no-ai-cleanup", action="store_true", help="Disable OpenAI event text cleanup for this run.")
+    parser.add_argument("--skip-past", action="store_true", help="Ignore events that start before today.")
     args = parser.parse_args()
 
     load_env_file()
@@ -82,6 +85,9 @@ def main() -> None:
                 )
                 venue_report["posts_fetched"] = len(posts)
                 events = extract_events_from_posts(posts, venue["name"])
+                if args.skip_past:
+                    events = [event for event in events if not event_is_past(event.start_at)]
+
                 ai_used = False
                 if not args.no_ai_cleanup and ai_cleanup_enabled():
                     for event in events:
@@ -157,14 +163,19 @@ def load_facebook_venues(area: str, slug: str | None):
 
 def upsert_event(venue_id: int, event, publish: bool) -> bool:
     db = get_db()
+    normalized_title = normalize_event_title(event.title)
     existing = db.execute(
         """
         SELECT id FROM events
         WHERE venue_id = ?
-          AND LOWER(title) = LOWER(?)
           AND start_at = ?
+          AND (
+            LOWER(title) = LOWER(?)
+            OR LOWER(REPLACE(title, ' ', '')) = LOWER(REPLACE(?, ' ', ''))
+            OR ? != '' AND LOWER(REPLACE(title, ' ', '')) = ?
+          )
         """,
-        (venue_id, event.title, event.start_at),
+        (venue_id, event.start_at, event.title, event.title, normalized_title, normalized_title),
     ).fetchone()
 
     now = datetime.now(UTC).isoformat(timespec="seconds")
@@ -223,6 +234,21 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
         ),
     )
     return True
+
+
+def normalize_event_title(title: str) -> str:
+    normalized = unicodedata.normalize("NFKD", title)
+    ascii_title = normalized.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "", ascii_title.lower())
+
+
+def event_is_past(start_at: str) -> bool:
+    try:
+        start = datetime.fromisoformat(start_at)
+    except ValueError:
+        return False
+    today = datetime.now().date()
+    return start.date() < today
 
 
 def build_post_previews(posts: list[dict], limit: int) -> list[dict]:

@@ -1,0 +1,88 @@
+{
+  "checked": 6,
+  "imported": 0,
+  "applied": true,
+  "published": true,
+  "ai_cleanup_available": true,
+  "results": [
+    {
+      "venue": {
+        "id": 5,
+        "name": "Bar Square",
+        "slug": "bar-square-ballina"
+      },
+      "facebook_url": "https://www.facebook.com/barsquareballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 13,
+        "name": "Hogan's Cocktail Bar",
+        "slug": "hogan-s-cocktail-bar"
+      },
+      "facebook_url": "https://www.facebook.com/hogansballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 6,
+        "name": "Paddy Mac's Ballina",
+        "slug": "paddy-macs-ballina"
+      },
+      "facebook_url": "https://www.facebook.com/paddymacsballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 20,
+        "name": "Rouse's Bar",
+        "slug": "rouse-s-bar"
+      },
+      "facebook_url": "https://www.facebook.com/202400133126719",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 1,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 22,
+        "name": "The Cot and Cobble",
+        "slug": "the-cot-and-cobble"
+      },
+      "facebook_url": "https://www.facebook.com/thecotandcobbleballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    },
+    {
+      "venue": {
+        "id": 8,
+        "name": "The Merry Monk",
+        "slug": "the-merry-monk-ballina"
+      },
+      "facebook_url": "https://www.facebook.com/themerrymonk_ballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 1,
+      "ai_cleanup": false
+    }
+  ],
+  "ocr_available": true
+}
