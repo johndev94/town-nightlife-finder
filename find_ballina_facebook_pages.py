@@ -12,8 +12,10 @@ from app.facebook_page_discovery import best_confident_candidate, discover_faceb
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Find likely Facebook page URLs for Ballina venues.")
+    parser = argparse.ArgumentParser(description="Find likely Facebook page URLs for venues.")
     parser.add_argument("--area", default="ballina-town", help="Area slug to search. Defaults to ballina-town.")
+    parser.add_argument("--town", default="", help="Town name used for search scoring. Defaults to the area name.")
+    parser.add_argument("--county", default="Mayo", help="County name used for search scoring. Defaults to Mayo.")
     parser.add_argument("--slug", help="Only search one venue slug.")
     parser.add_argument("--all", action="store_true", help="Include venues that already have a Facebook page URL.")
     parser.add_argument("--apply", action="store_true", help="Save confident matches to venues.social_facebook.")
@@ -34,6 +36,8 @@ def main() -> None:
 
         db = get_db()
         for venue in venues:
+            town = args.town.strip() or town_from_area_name(venue["area_name"])
+            county = args.county.strip()
             entry = {
                 "venue": {"id": venue["id"], "name": venue["name"], "slug": venue["slug"]},
                 "existing_facebook_url": venue["social_facebook"],
@@ -45,8 +49,8 @@ def main() -> None:
             try:
                 candidates = discover_facebook_page_candidates(
                     venue_name=venue["name"],
-                    town="Ballina",
-                    county="Mayo",
+                    town=town,
+                    county=county,
                     website_url=venue["social_website"],
                     max_candidates=args.max_candidates,
                 )
@@ -86,9 +90,13 @@ def main() -> None:
         print("Dry-run only. Re-run with --apply to save confident matches.")
 
 
+def town_from_area_name(area_name: str) -> str:
+    return area_name.replace(" Town", "").strip() or area_name
+
+
 def load_venues(area: str, slug: str | None, include_existing: bool):
     query = """
-        SELECT v.id, v.name, v.slug, v.social_facebook, v.social_website
+        SELECT v.id, v.name, v.slug, v.social_facebook, v.social_website, a.name AS area_name
         FROM venues v
         JOIN areas a ON a.id = v.area_id
         WHERE a.slug = ?

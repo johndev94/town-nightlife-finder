@@ -1,0 +1,298 @@
+{
+  "checked": 5,
+  "imported": 0,
+  "applied": false,
+  "published": false,
+  "ai_cleanup_available": true,
+  "results": [
+    {
+      "venue": {
+        "id": 28,
+        "name": "Bar One",
+        "slug": "bar-one"
+      },
+      "facebook_url": "https://www.facebook.com/barone.ie/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/barone.ie/posts/pfbid0LhzQYP6kpjxr916KKyvfkJ4Lfe875evkBPyFTCeVduMzfkD9yHzcipwuRt7JahpVl",
+          "timestamp": "2026-05-01T20:00:42.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-ord5-1.xx.fbcdn.net/v/t51.82787-15/681927364_18583743391041954_1155946989565061078_n.jpg?stp=dst-jpg_s640x640_tt6&_nc_cat=111&ccb=1-7&_nc_sid=13d280&_nc_ohc=-syuWl9AKpQQ7kNvwG87piT&_nc_oc=AdpAGvpxubVtNkCkV0ZhpmBFpQYQKr7ieuxCI-5hWl1G4wVg6X6fUsy9Ph6Ycqiqedw&_nc_zt=23&_nc_ht=scontent-ord5-1.xx&_nc_gid=gTA_bJg1le5iIq2u4ZPRiw&_nc_ss=72289&oh=00_Af6FBJ_T7mGojn7gDGF9Uqxrfo3BgShgutoKMmKJZOGrbA&oe=69FFE484"
+          ],
+          "ocr_preview": "we mw * j bide I",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-01T21:00",
+          "preview": "Wishing this legend a great gig in Castlebar @tf royal castlebar tonight \ud83c\udf99\ufe0f\ud83c\udf99\ufe0f\ud83c\udf99\ufe0f\ud83c\udf99\ufe0f Delighted to welcome @damiendempseymusic to dine with us in Rush Street \ud83c\udf08\ud83c\udf08\ud83c\udf08\ud83c\udf08 and to watch him perform for his younger fans this morning. What a special guy \ud83d\ude4f\ud83c\udffb\ud83d\ude4f\ud83c\udffb. we mw * j bide I"
+        },
+        {
+          "url": "https://www.facebook.com/barone.ie/posts/pfbid02JEAGniVcQchr1zbn5KB6FLftgAi9sGzFyqZgmWVMj5YYezHTY8kyoJwJDkJbVLwql",
+          "timestamp": "2026-04-03T12:57:45.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-ord5-3.xx.fbcdn.net/v/t51.82787-15/658550369_18575967454041954_5171572071010866640_n.jpg?stp=dst-jpg_s640x640_tt6&_nc_cat=109&ccb=1-7&_nc_sid=13d280&_nc_ohc=AUdz0dA5nogQ7kNvwHL79fA&_nc_oc=AdpqpMC0PyHlxFOv-znuqtLqj0Q24B3YsOzOIroi07IkdRWBto9iYwTM-pk5JPLdOYo&_nc_zt=23&_nc_ht=scontent-ord5-3.xx&_nc_gid=gTA_bJg1le5iIq2u4ZPRiw&_nc_ss=72289&oh=00_Af5334k8mcJdeteTJH95XqkARjqfnkWII8_E_bfY2X2urQ&oe=69FFEBB3"
+          ],
+          "ocr_preview": "",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": "All good things from 4 PM today \ud83d\udc23\ud83d\udc23\ud83d\udc23\ud83d\udc23"
+        }
+      ]
+    },
+    {
+      "venue": {
+        "id": 29,
+        "name": "Bridge St Bar",
+        "slug": "bridge-st-bar"
+      },
+      "facebook_url": "https://www.facebook.com/bridgestreetbarcastlebar/",
+      "status": "parsed",
+      "events": [
+        {
+          "title": "Mn\u00e1 Mn\u00e1 Jazz Live at Bridge St Bar",
+          "description": "Mn\u00e1 Mn\u00e1, a female jazz quartet from Westport, performs jazz standards, originals, and classic tunes at Bridge St Bar, Castlebar, on May 15 at 8:30 PM. Tickets via Eventbrite.",
+          "genre": "Live Music",
+          "start_at": "2026-05-15T20:30",
+          "end_at": "2026-05-15T23:30",
+          "price_label": "TBC",
+          "price_amount": null,
+          "image_url": "https://scontent-msp1-1.xx.fbcdn.net/v/t39.30808-6/677822054_1591733676290454_1199747938853436689_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_ohc=VPYiRE9OPv4Q7kNvwHdKwaE&_nc_oc=AdqEPN_by-2kKWmJSVLzHv-jqBNvqXg7fD9IfldSL7HvT2XFmeF2dGVb_DE_yPf3-0M&_nc_zt=23&_nc_ht=scontent-msp1-1.xx&_nc_gid=3frvgBaIlrP17Ic23X1Fpw&_nc_ss=72289&oh=00_Af5CZD1ToRjkMcvbYHCZs9X9DfZfYjYwqj7pB1J2oqtYYQ&oe=6A000940",
+          "source_url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid0v1bACy6atpkHpdHY55wbRiG4K8AjcNZeM7cXzZRfjMNW5h5bfHkfKooTdzPVeRwfl",
+          "confidence": 0.62,
+          "post_text": "Mn\u00e1 Mn\u00e1 Next Gig bridge street (upstairs) Castlebar Friday May 15 th 8.30 pm. Follow link below for tickets/donations at Eventbrite We are \"Mn\u00e1 Mn\u00e1\" - 4 women from the Westport area who have got together to play jazz - voice, double bass, soxophone and piano. Our repertoire is made up of jazz standards, originals composed by songwriters in the band and a couple of surprise tunes we include because we love them! https://www.eventbrite.ie/e/mna-mna-tickets-1986720765290?aff=oddtdtcreator&keep tld=true \\\\\\\\ Standards \u2018ml * any Originals Rs Beloved oS Se DA Classics Yo oe le New pot, bridge st : sani May 15\" iN Coe 8.30 PM >> RH sn \u00bb\u00bb NS \u00e9\u00e9 4 Z a \\\\ <4 i% iS r"
+        }
+      ],
+      "error": null,
+      "posts_fetched": 10,
+      "ai_cleanup": true,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid031F5pzCFDF6uEgxKtCXPr3vdP32pG3jQCeBHJKbRpAREPPE3Etz7jVf2dYVGK3mfkl",
+          "timestamp": "2026-05-02T12:45:43.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-lga3-1.xx.fbcdn.net/v/t51.82787-15/683643342_18435961918187290_8518035314247617898_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=111&ccb=1-7&_nc_sid=13d280&_nc_ohc=8TXVzPXYiasQ7kNvwHnPb2Z&_nc_oc=Ado3NDbpoCwT61pHxKgfiv31CsLkrSnKBqEV8nEdmzElXiQbX6N60AukvdltD3_a-KQ&_nc_zt=23&_nc_ht=scontent-lga3-1.xx&_nc_gid=rK8el7CHggNM_uzrHeYWrg&_nc_ss=72289&oh=00_Af5rqfMnJa_qBRbypF0Mj1FQtrFTG7zgbLkeAirWB9r5xg&oe=6A000A57"
+          ],
+          "ocr_preview": "ry. wi proadcast A Today 2-5 PM EUR b yet = ;; =",
+          "looks_like_event": true,
+          "inferred_start_at": null,
+          "preview": "Going Live with @crcfm 102.9. ry. wi proadcast A Today 2-5 PM EUR b yet = ;;;; ="
+        },
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid0qRE6ytwNSZwxg3d57yTETi9Z3ZMVubk7XeR4hxTRKgruaNm6md5zjqpcnDREtQRxl",
+          "timestamp": "2026-05-01T13:34:59.000Z",
+          "image_count": 0,
+          "image_urls": [],
+          "ocr_preview": "",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-01T14:00",
+          "preview": "2 sets of tickets left for tonight's show Doors from 8:45, laughs shortly after \ud83d\ude02\ud83d\ude02\ud83d\ude02\ud83d\ude02"
+        },
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid02BNR7k8UDc4HkAbYxirADLET3mB32bZPWt2uBdq6ZGHUCC24qTJtYvJG2uA19LCjml",
+          "timestamp": "2026-04-27T11:37:57.000Z",
+          "image_count": 0,
+          "image_urls": [],
+          "ocr_preview": "",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-01T21:00",
+          "preview": "Last call for Tickets - https://www.eventbrite.ie/e/castlebar-comedy-club-friday-1 st-may-2026-tickets-1986531746931?utm experiment=test share listing&aff=ebdsshios&sg=8 facdb 803 b 97 d 398745 d 734 fbf 5 cd 768 c 4 a 44517 fa 848 fab 1 aaa 9300 ee 7 b 9 b 82 af 8 af 0 db 5 a 65"
+        },
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid0Pw4tinbnxex6kvG8tJcPPQKAGPkurFj4EyLjk7sc6Pup6cvjsNQiAMt2MJjrGZxrl",
+          "timestamp": "2026-04-19T19:29:48.000Z",
+          "image_count": 0,
+          "image_urls": [],
+          "ocr_preview": "",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": ""
+        },
+        {
+          "url": "https://www.facebook.com/bridgestreetbarcastlebar/posts/pfbid0v1bACy6atpkHpdHY55wbRiG4K8AjcNZeM7cXzZRfjMNW5h5bfHkfKooTdzPVeRwfl",
+          "timestamp": "2026-04-19T19:29:42.000Z",
+          "image_count": 2,
+          "image_urls": [
+            "https://scontent-msp1-1.xx.fbcdn.net/v/t39.30808-6/677822054_1591733676290454_1199747938853436689_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_ohc=VPYiRE9OPv4Q7kNvwHdKwaE&_nc_oc=AdqEPN_by-2kKWmJSVLzHv-jqBNvqXg7fD9IfldSL7HvT2XFmeF2dGVb_DE_yPf3-0M&_nc_zt=23&_nc_ht=scontent-msp1-1.xx&_nc_gid=3frvgBaIlrP17Ic23X1Fpw&_nc_ss=72289&oh=00_Af5CZD1ToRjkMcvbYHCZs9X9DfZfYjYwqj7pB1J2oqtYYQ&oe=6A000940",
+            "https://scontent-msp1-1.xx.fbcdn.net/v/t39.30808-6/677902612_1591733699623785_83413718856610576_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=pDspYmrAlmIQ7kNvwFJ3TuU&_nc_oc=Adp2lQipbdbLbuXlACXRD7LKfMJ8XDjHCmoOv_8DszNUmTXjQGNKuVX6zXBjJjvaXj0&_nc_zt=23&_nc_ht=scontent-msp1-1.xx&_nc_gid=3frvgBaIlrP17Ic23X1Fpw&_nc_ss=72289&oh=00_Af5mIq3ScZ8NOjT44LEMBsjKEuYYGvSI6u79DaDNi_JaiA&oe=69FFD592"
+          ],
+          "ocr_preview": "\\\\\\\\ Standards \u2018ml * any Originals Rs Beloved oS Se DA Classics Yo oe le New pot, bridge st : sani May 15\" iN Coe 8.30 PM >> RH sn \u00bb\u00bb NS \u00e9\u00e9 4 Z a \\\\ <4 i% iS r",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-15T20:30",
+          "preview": "Mn\u00e1 Mn\u00e1 Next Gig bridge street (upstairs) Castlebar Friday May 15 th 8.30 pm. Follow link below for tickets/donations at Eventbrite We are \"Mn\u00e1 Mn\u00e1\" - 4 women from the Westport area who have got together to play jazz - voice, double bass, soxophone and piano. Our repertoire is ma"
+        }
+      ]
+    },
+    {
+      "venue": {
+        "id": 30,
+        "name": "Bungalow Bar",
+        "slug": "bungalow-bar"
+      },
+      "facebook_url": "https://www.facebook.com/Bungalowbar21/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 4,
+      "ai_cleanup": false,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/Bungalowbar21/posts/pfbid0VwRRSKzCqsweDnjwaaJXkuKJYgfMff1uPb3Jk3jY4ss5dwTEBBReJ7t3fomjGTpl",
+          "timestamp": "2026-05-02T13:53:29.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-bos5-1.xx.fbcdn.net/v/t39.30808-6/685865549_1002160955496680_2476733721950585967_n.jpg?stp=cp6_dst-jpg_s565x565_tt6&_nc_cat=107&ccb=1-7&_nc_sid=13d280&_nc_ohc=9IUFqENBztMQ7kNvwFnT5qS&_nc_oc=AdriK9-2SwoQRlFfrx_dp8Jcat9Vrat-rlwNoh5wlTZ0-utwJAAfNGLu_qtKnySsH1rYMiYJcVBW6OXAetzNxSbN&_nc_zt=23&_nc_ht=scontent-bos5-1.xx&_nc_gid=n6rQoPLns0SHqN80xhck_g&_nc_ss=72289&oh=00_Af7J46nzxJUyzweG5olT2C5-e8Z5CauiH3qDJwso1N6AVQ&oe=69FFE68B"
+          ],
+          "ocr_preview": "Live music this Bank Holiday Monday in the Bungalow 6-8 with The Trilogy. Hope to see you there && 019 3 shares \u00a2>\u00a2> Like Q Comment \u00a9\u00a9 Share",
+          "looks_like_event": true,
+          "inferred_start_at": "2026-05-04T18:00",
+          "preview": "Live music this Bank Holiday Monday in the Bungalow 6-8 with The Trilogy"
+        },
+        {
+          "url": "https://www.facebook.com/Bungalowbar21/posts/pfbid037b833BhhrAgognqzrcsw73SH9vuu13kZJKTf564GUg8R5uGxgTwPEfSH6k23vELKl",
+          "timestamp": "2026-04-06T02:22:35.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-bos5-1.xx.fbcdn.net/v/t39.30808-6/665474321_981293080916801_3869951276808436852_n.jpg?stp=cp6_dst-jpg_p526x296_tt6&_nc_cat=104&ccb=1-7&_nc_sid=13d280&_nc_ohc=-OkwHngOwsUQ7kNvwF9gAAN&_nc_oc=AdqEN2pbZDVtjEUzXP6T4uJ_BqxreY8uIlquWHCWNoLrzQAXo7cq7qO5bYDCxHySlwbEVLv1rPXZyEnyEaOl5ZOb&_nc_zt=23&_nc_ht=scontent-bos5-1.xx&_nc_gid=n6rQoPLns0SHqN80xhck_g&_nc_ss=72289&oh=00_Af69XSoyzbCsfoatIYopHpRHET6AjwbaCz3pyCC08FbQCg&oe=69FFF30B"
+          ],
+          "ocr_preview": "\u2014\u2014 OO aa iy 7 f Chive Coffey Born Braver Declan me Hate MS Dey mot Kurgsso Blue lFoe mt Dorret 2 Norgen Better Times Aheod Pp ae Eleror Waldro lous Mary - Tye ST ksckus Tne lomibhmaithgest Du Omick Kilkoume Better Days Ahead l 6 tephy a }} 4 tb Pom Fo Showurca poreriotian iho Fly",
+          "looks_like_event": true,
+          "inferred_start_at": null,
+          "preview": "\u2014\u2014\u2014\u2014 OO aa iy 7 f Chive Coffey Born Braver Declan me Hate MS Dey mot Kurgsso Blue lFoe mt Dorret 2 Norgen Better Times Aheod Pp ae Eleror Waldro lous Mary - Tye ST ksckus Tne lomibhmaithgest Du Omick Kilkoume Better Days Ahead l 6 tephy a }}}} 4 tb Pom Fo Showurca poreriotian iho"
+        },
+        {
+          "url": "https://www.facebook.com/Bungalowbar21/posts/pfbid0349GUWJY8w5sBDCjtxgPE5RVtyYxAzc71UerZwhz2NfTiZ8vxBfgJ5d1pSNMX5q9Ql",
+          "timestamp": "2026-03-24T22:14:36.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-bos5-1.xx.fbcdn.net/v/t39.30808-6/655579590_971590298553746_7314945005071887812_n.jpg?stp=cp6_dst-jpg_p180x540_tt6&_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=zCz5Newt8jkQ7kNvwFnsLYQ&_nc_oc=AdoBWPfkJOdCPxncUwTZIKnuHw1lVKxN0Z10IHybf4ajIUQHvj-HBTT_WtLPB7e0tc2BLbVIbnLt_s5_GmCBHNhi&_nc_zt=23&_nc_ht=scontent-bos5-1.xx&_nc_gid=n6rQoPLns0SHqN80xhck_g&_nc_ss=72289&oh=00_Af6N-kSnFIMN_p7i1hhOfv_k5ba9vjUA0YVt-hsVfOjXtQ&oe=69FFFAAF"
+          ],
+          "ocr_preview": "3. A EW Ireland vs Czechia eS \\\\ J = \u2018\u2018 }}. va \u2018\u2018 bie 4 s *S FR : Pl NTI Troy Parr mT",
+          "looks_like_event": false,
+          "inferred_start_at": "2026-03-26T19:45",
+          "preview": "Thursday 7.45 Pm.Free pint for everyone in bar if Troy parrot scores first goal in 90 mins \u2026\u2026\u2026\u2026 \ud83c\udf7a\ud83c\udf7a\ud83e\udd42\u2618\ufe0f\ud83c\udf7a\ud83c\udf7a\ud83e\udd42\u2618\ufe0f. 3. A EW Ireland vs Czechia eS \\\\\\\\ J = \u2018\u2018\u2018\u2018 }}. va \u2018\u2018\u2018\u2018 bie 4 s *S FR : Pl NTI Troy Parr mT"
+        },
+        {
+          "url": "https://www.facebook.com/Bungalowbar21/posts/pfbid0nbdVYJLykCpEik9JnLprdNFjZ5wtpUj3g4kNw8MRmCuyAoi2iW1X5cYg4CzGnuepl",
+          "timestamp": "2026-03-13T20:04:17.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent.fhnl3-2.fna.fbcdn.net/v/t39.30808-6/651175206_962636069449169_9221124875151593093_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=CPcJ1VT3BsgQ7kNvwGuxEFt&_nc_oc=AdqzFVv0FsvAWD0sg7onN5bVqFBIFcaVoWRBkUU2kL4LqAWfsSiycrfc9PZ7vkkaMxU&_nc_zt=23&_nc_ht=scontent.fhnl3-2.fna&_nc_gid=SHdDPUAszFTybDvY9-t60A&_nc_ss=72289&oh=00_Af7Mfpbnrla3dy70zr0SiW3wYL9ofWPgwQsO4UOAnQmfng&oe=69FFE086"
+          ],
+          "ocr_preview": "' oY at 4 J Cronrs Y ROR GN ees \u2014\u2014\u2014\u2014 Aviva Stadium-Oublin. 13-10-2018 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 aay )) i it Vey y AAA i) Cam \u2018ih Bungalow BAR - Cheltenham Tipster Comp =>=> - jj << = %% e@ a,.. {{ \u2018\u2018 4 Ay, erated = \\\\ Coc G Ko = >. SS",
+          "looks_like_event": false,
+          "inferred_start_at": "2018-10-13T21:00",
+          "preview": "Congrats Mikey top tipster bungalow bar Cheltenham comp and congrats to all the cash prize winners \ud83d\udc4f\ud83d\udc4f\u2618\ufe0fThanks to all that entered, roll on 2027 \ud83c\udfc7\ud83c\udfc7. ' oY at 4 J Cronrs Y ROR GN ees \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 Aviva Stadium-Oublin. 13-10-2018 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 aay )))) i it Vey y AAA i) Cam \u2018ih Bungal"
+        }
+      ]
+    },
+    {
+      "venue": {
+        "id": 41,
+        "name": "Rocky's",
+        "slug": "rocky-s"
+      },
+      "facebook_url": "https://www.facebook.com/rockyscastlebar/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 1,
+      "ai_cleanup": false,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/rockyscastlebar/",
+          "timestamp": null,
+          "image_count": 0,
+          "image_urls": [],
+          "ocr_preview": "",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": ""
+        }
+      ]
+    },
+    {
+      "venue": {
+        "id": 46,
+        "name": "The Ellison",
+        "slug": "the-ellison"
+      },
+      "facebook_url": "https://www.facebook.com/theellisonhotel/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 10,
+      "ai_cleanup": false,
+      "post_previews": [
+        {
+          "url": "https://www.facebook.com/theellisonhotel/posts/pfbid02qgBpxSSLCHJCRtRoxus8j6JHKYoaEHLUhoA1V6WH62xWP8dZp3fVEUYTR9viFKyTl",
+          "timestamp": "2026-05-04T17:00:19.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-atl3-3.xx.fbcdn.net/v/t39.30808-6/684963158_1400743342094228_7863446870370316378_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=13d280&_nc_ohc=6qgSa1WEB0AQ7kNvwGajmRS&_nc_oc=AdqzYsV-Xo3pw2jk5kdeF-_cZgSgXP0XyrLvI9PhDaA8DMoEwxcO8IoDUatCuTZjPQI&_nc_zt=23&_nc_ht=scontent-atl3-3.xx&_nc_gid=EqJ4OQLXp_KBZHwJGR18oQ&_nc_ss=72289&oh=00_Af62mlwvvIssbx590zmsLEj2iTJ7sLrfSWvOr3QszPucMA&oe=69FFE1CD"
+          ],
+          "ocr_preview": "we PLA fir Bia ie",
+          "looks_like_event": false,
+          "inferred_start_at": "2026-08-31T15:00",
+          "preview": "\u2728\u2728\u2728\u2728 Summer Staycation at The Ellison \u2728\u2728\u2728\u2728 Make the most of the final days of summer with our special getaway offer \ud83c\udf3f\ud83c\udf3f\ud83c\udf3f\ud83c\udf3f Enjoy a 2 Night Stay with Breakfast &&&& 1 Evening Meal in the heart of Castlebar. \ud83c\udf77\ud83c\udf77\ud83c\udf77\ud83c\udf77 Stay between 21 st \u2013\u2013\u2013\u2013 31 st August and receive a complimentary glass "
+        },
+        {
+          "url": "https://www.facebook.com/theellisonhotel/posts/pfbid0Hc82Vph3dvMMaT2cLtH8NXAo9WxYuNxhgpjXqS2ze2zS3qJ2D7g9yShkqsFm1BdPl",
+          "timestamp": "2026-05-02T09:00:47.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-atl3-3.xx.fbcdn.net/v/t39.30808-6/684419733_1400742498760979_2307096200685362604_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=107&ccb=1-7&_nc_sid=13d280&_nc_ohc=j7D1hK-wnFUQ7kNvwHPMfi2&_nc_oc=AdqYiHoRpsJPCLuhuRYsVOhSRMEIFwfxzZgObXGNaD0V_e5iUp9SDjsNni5SmlpMkow&_nc_zt=23&_nc_ht=scontent-atl3-3.xx&_nc_gid=EqJ4OQLXp_KBZHwJGR18oQ&_nc_ss=72289&oh=00_Af6V_avTCrxfY7Css-gu_VGAr_3NY6m3ZW_RQ8BNCI92wQ&oe=69FFDB51"
+          ],
+          "ocr_preview": "S&S an ak ood aE Failte go Co. Maigh Eo om 7 Welcome TO Soe ee Co. Mayo Ry PAS ae >> aia ee",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": "Happy Mayo Day! Celebrating \"Mayo \u2013\u2013\u2013\u2013 The Connected County\" \u2013\u2013\u2013\u2013 where people, culture, and community come together. From all at The Ellison Hotel, proud to be part of a vibrant and welcoming county. See you here soon! \ud83d\ude01\ud83d\ude01. S&S an ak ood aE Failte go Co. Maigh Eo om 7 Welcome TO "
+        },
+        {
+          "url": "https://www.facebook.com/theellisonhotel/posts/pfbid0NLEqLX5Mr35JENYgc4ykjQKNPLjmxDvQ84iXWx9eKAxEiHRU4PjvcKQpTeWeDaSYl",
+          "timestamp": "2026-05-01T07:00:19.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-atl3-1.xx.fbcdn.net/v/t39.30808-6/677772873_1393707216131174_7075033867104475281_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=103&ccb=1-7&_nc_sid=13d280&_nc_ohc=2TcfS0tyGd4Q7kNvwFxLjj6&_nc_oc=AdrEbbpuRDUAZVCVwhdZjdmdMADi4g3FDctlmto4FJwI_Uc9xNFtdByr8HomyjSp-WI&_nc_zt=23&_nc_ht=scontent-atl3-1.xx&_nc_gid=EqJ4OQLXp_KBZHwJGR18oQ&_nc_ss=72289&oh=00_Af7hV4rZlVFjL8lOGCDP-fGND_qmDru3vdckfD7GkLF1gA&oe=69FFD9ED"
+          ],
+          "ocr_preview": "*. : i o. \"8 a i J She \\\\ A Y Pe n - a ;; ' 2 fs s << \\\\ \u00bb\u00bb 7\" Aan << \u00a5\u00a5, a 3 Z ee at 4 4. Ye a we Br \u2018\u2018 \"\" a Pe hy, Se, ys ese",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": "Wishing everyone a joyful start to the month and a bright welcome to the summer season \u2600\ufe0f\u2600\ufe0f\u2600\ufe0f\u2600\ufe0f May Day is a celebration of renewal, light and new beginnings \u2014\u2014\u2014\u2014 a reminder to slow down, enjoy the longer days and embrace everything the new season brings \ud83c\udf3f\u2728\ud83c\udf3f\u2728\ud83c\udf3f\u2728\ud83c\udf3f\u2728 Here's to fresh "
+        },
+        {
+          "url": "https://www.facebook.com/theellisonhotel/posts/pfbid0irQmhxY9NxCE78g95CmwcXRtVkowN9aSyaxoCG1ARdGhF6YAjMZE9hyrhhtgtBcJl",
+          "timestamp": "2026-04-29T09:00:45.000Z",
+          "image_count": 3,
+          "image_urls": [
+            "https://scontent-atl3-3.xx.fbcdn.net/v/t39.30808-6/678923303_1393544442814118_765481747960860245_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=111&ccb=1-7&_nc_sid=13d280&_nc_ohc=7HXN-WZ3BqYQ7kNvwG7eAEi&_nc_oc=AdpTjUVv4Cy5yvTaBCg6otYA8f7AFmIrN1WMFlMlBs_IZs3dEb9t8E4NHVhlooS0HEo&_nc_zt=23&_nc_ht=scontent-atl3-3.xx&_nc_gid=TUwTQM-IJhVJjksnRcEQEA&_nc_ss=72289&oh=00_Af4-ESe4rlGMCGG7redPuqRKZhskXv97wnL6BHlZaBuHCg&oe=69FFD837",
+            "https://scontent-atl3-1.xx.fbcdn.net/v/t39.30808-6/675868098_1393544436147452_4054145627198159486_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=103&ccb=1-7&_nc_sid=13d280&_nc_ohc=kmunDqY8MlQQ7kNvwG2lpHR&_nc_oc=Adqpu5kmUHBshlTtspX3QpXYitNYetqltnWxuEe2U8gF2bLp7n3xx27SID_CprNcCS8&_nc_zt=23&_nc_ht=scontent-atl3-1.xx&_nc_gid=TUwTQM-IJhVJjksnRcEQEA&_nc_ss=72289&oh=00_Af7ISDuaRXhmLIL6BdDySCVtzIA4FiWLblBz0Hq2jc5gmA&oe=69FFFE21",
+            "https://scontent-atl3-1.xx.fbcdn.net/v/t39.30808-6/676286746_1393544439480785_6145134399170842059_n.jpg?stp=dst-jpg_s590x590_tt6&_nc_cat=106&ccb=1-7&_nc_sid=13d280&_nc_ohc=8aD4fPo0lk8Q7kNvwHAGULC&_nc_oc=AdopxAIugHlg1xNgYvd4UTMp_7hQum9sBQQwVfwcm6mEGWXEJ0IosQRWXHZ_KmuQUqY&_nc_zt=23&_nc_ht=scontent-atl3-1.xx&_nc_gid=TUwTQM-IJhVJjksnRcEQEA&_nc_ss=72289&oh=00_Af6N0DtTmGe0KRjZhc1YS32VDOs1JIr5HKawgjmUESnIHA&oe=6A00097A"
+          ],
+          "ocr_preview": "AJ = is a q ww \u2018\u2018 ' * ENE thx 1 s i oa FT ie ty SS = KN Se \u2018\u2018 =e ware \"\" 4 ae Se j 4 5 \u2122\u2122 \u2014\u2014\u2014\u2014 \"\" eV ile 7 Ld \u2018\u2018 j = {{ ul 3 >> 6. 4 if :",
+          "looks_like_event": false,
+          "inferred_start_at": null,
+          "preview": "Looking for your next breakfast date, lunch catch-up, dinner out or celebration venue? \ud83c\udf7d\ufe0f\u2728\ud83c\udf7d\ufe0f\u2728\ud83c\udf7d\ufe0f\u2728\ud83c\udf7d\ufe0f\u2728 Siar Restaurant &&&& Bar has it all \u2014\u2014\u2014\u2014 fresh local flavours, handcrafted cocktails, and the perfect setting for every special occasion. From birthdays and anniversaries to sponta"
+        },
+        {
+          "url": "https://www.facebook.com/theellisonhotel/posts/pfbid02iFMSMgNKwQ8yWSb1q47FarVYcEfoCcetEKdA1H2idYuYGERSaWAku7WpKzzB7j2Al",
+          "timestamp": "2026-04-27T09:00:24.000Z",
+          "image_count": 1,
+          "image_urls": [
+            "https://scontent-atl3-3.xx.fbcdn.net/v/t39.30808-6/677753245_1393705169464712_1428374755353460302_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=108&ccb=1-7&_nc_sid=13d280&_nc_ohc=9gZ1OXB9XqgQ7kNvwGYcnUy&_nc_oc=AdplDo7ICMLp_Gl4q9oO9rYQrV7_0B1XSfuRBTG4KIR6U2joHxhLTdMQzPx2Lk7GPB4&_nc_zt=23&_nc_ht=scontent-atl3-3.xx&_nc_gid=TUwTQM-IJhVJjksnRcEQEA&_nc_ss=72289&oh=00_Af7_pI34rXzKnTzLEyV3JfOQOKYU6qYMWLIVM2j8WB-Owg&oe=69FFFE83"
+          ],
+          "ocr_preview": "++ MAY DAY >> \u2014\u2014\u2014\u2014 * Customs: i \\\\ oy x 2 i eh ivelweandwehifcoWsyo ay SRG ea NTS Su, DS So",
+          "looks_like_event": true,
+          "inferred_start_at": null,
+          "preview": "\ud83c\udf3c\u2728\ud83c\udf3c\u2728\ud83c\udf3c\u2728\ud83c\udf3c\u2728 May Day Customs in Ireland \u2728\ud83c\udf3c\u2728\ud83c\udf3c\u2728\ud83c\udf3c\u2728\ud83c\udf3c May Day (known in Irish tradition as Bealtaine) marks the beginning of summer and has long been associated with renewal, growth and celebration across Ireland. Traditionally, homes and farms were decorated with flowers and greenery to "
+        }
+      ]
+    }
+  ],
+  "ocr_available": true
+}

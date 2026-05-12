@@ -21,6 +21,9 @@ GOOGLE_FIELD_MASK = ",".join(
         "places.location",
         "places.googleMapsUri",
         "places.businessStatus",
+        "places.primaryType",
+        "places.types",
+        "places.websiteUri",
     ]
 )
 

@@ -100,6 +100,10 @@ export type InitialData = {
 
 export type Filters = {
   area: string
+  bounds_north: string
+  bounds_south: string
+  bounds_east: string
+  bounds_west: string
   genre: string
   venue_type: string
   price_band: string

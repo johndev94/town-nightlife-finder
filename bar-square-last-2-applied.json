@@ -1,0 +1,23 @@
+{
+  "checked": 1,
+  "imported": 0,
+  "applied": true,
+  "published": true,
+  "ai_cleanup_available": true,
+  "results": [
+    {
+      "venue": {
+        "id": 5,
+        "name": "Bar Square",
+        "slug": "bar-square-ballina"
+      },
+      "facebook_url": "https://www.facebook.com/barsquareballina/",
+      "status": "parsed",
+      "events": [],
+      "error": null,
+      "posts_fetched": 2,
+      "ai_cleanup": false
+    }
+  ],
+  "ocr_available": true
+}

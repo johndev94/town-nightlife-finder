@@ -35,9 +35,8 @@ FACEBOOK_BLOCKED_PATH_PREFIXES = (
     "/groups/",
     "/marketplace/",
 )
-GENERIC_TOKENS = {
+BASE_GENERIC_TOKENS = {
     "bar",
-    "ballina",
     "pub",
     "restaurant",
     "the",
@@ -68,7 +67,22 @@ def discover_facebook_page_candidates(
     ranked: list[FacebookPageCandidate] = []
 
     if website_url:
-        for raw_result in discover_from_website(website_url, timeout=timeout):
+        direct_facebook_url = canonicalize_facebook_page_url(website_url)
+        if direct_facebook_url:
+            append_candidate(
+                ranked,
+                seen_urls,
+                {"url": direct_facebook_url, "title": venue_name, "snippet": f"Facebook URL from venue website field for {town}"},
+                venue_name,
+                town,
+                county,
+                source_bonus=0.28,
+            )
+        try:
+            website_results = discover_from_website(website_url, timeout=timeout)
+        except requests.RequestException:
+            website_results = []
+        for raw_result in website_results:
             append_candidate(ranked, seen_urls, raw_result, venue_name, town, county, source_bonus=0.22)
 
     queries = [
@@ -208,7 +222,8 @@ def score_candidate(
 ) -> tuple[float, list[str]]:
     reasons: list[str] = []
     haystack = " ".join(part for part in (title, snippet, url) if part).lower()
-    venue_tokens = [token for token in tokenize(venue_name) if token not in GENERIC_TOKENS]
+    generic_tokens = BASE_GENERIC_TOKENS | set(tokenize(town))
+    venue_tokens = [token for token in tokenize(venue_name) if token not in generic_tokens]
     town_token = town.lower()
     county_token = county.lower()
     url_slug = normalize_name(urlparse(url).path.rsplit("/", 2)[-2] if url.endswith("/") else urlparse(url).path.rsplit("/", 1)[-1])
@@ -232,10 +247,10 @@ def score_candidate(
         reasons.append(f"{url_token_matches}/{len(venue_tokens)} URL slug tokens")
     if town_token in haystack:
         score += 0.12
-        reasons.append("mentions Ballina")
+        reasons.append(f"mentions {town}")
     if county_token in haystack:
         score += 0.05
-        reasons.append("mentions Mayo")
+        reasons.append(f"mentions {county}")
     if "/profile.php?id=" in url:
         score -= 0.03
     if re.search(r"/(?:posts|events|reel)/", url, re.I):
