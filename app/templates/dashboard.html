@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Dashboard | Town Nightlife Finder{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
 {% block content %}
 <section class="detail-hero">
   <div>
@@ -8,6 +9,105 @@
     <p class="hero-text">{% if user["role"] == "admin" %}Review the whole town catalog, update sync status, and approve or reject venue claims.{% else %}Keep your venue listings current without touching any other venue's records.{% endif %}</p>
   </div>
 </section>
+
+{% if user["role"] == "admin" %}
+<section class="panel admin-tools-panel">
+  <div class="section-heading">
+    <p class="eyebrow">Admin data pipeline</p>
+    <h2>Import, review, and publish nightlife data safely</h2>
+    <p class="muted">These tools call approved backend services only. They do not run terminal commands from the browser.</p>
+  </div>
+
+  {% if admin_report %}
+    <div class="admin-report">
+      <h3>{{ admin_report["title"] }}</h3>
+      {% if admin_report["summary"] %}<p>{{ admin_report["summary"] }}</p>{% endif %}
+      <div class="report-list">
+        {% for row in admin_report["rows"] %}
+          <div class="report-row status-{{ row['status'] }}">
+            <strong>{{ row["primary"] }}</strong>
+            <span>{{ row["status"] }} · {{ row["secondary"] }}</span>
+            {% if row["url"] %}<a href="{{ row['url'] }}" target="_blank" rel="noreferrer">Open source</a>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="admin-tool-grid">
+    <form method="post" action="{{ url_for('nightlife.admin_google_places_import') }}" class="dashboard-form admin-tool-card">
+      <h3>1. Import pubs from Google Places</h3>
+      <p class="muted">Preview venue results first, then save them into the selected town area.</p>
+      <div class="form-grid">
+        <label>Town<input type="text" name="town" value="Castlebar" required></label>
+        <label>County<input type="text" name="county" value="Mayo" required></label>
+        <label>Area slug<input type="text" name="area_slug" placeholder="castlebar-town"></label>
+      </div>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview venues</button>
+        <button type="submit" name="action" value="apply" class="secondary">Save venues</button>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_facebook_page_discovery') }}" class="dashboard-form admin-tool-card">
+      <h3>2. Find Facebook pages</h3>
+      <p class="muted">Find likely official pages for venues in an area. Save only confident matches.</p>
+      <div class="form-grid">
+        <label>Area<select name="area" required>
+          {% for area in areas %}
+            <option value="{{ area['slug'] }}">{{ area["name"] }}</option>
+          {% endfor %}
+        </select></label>
+        <label>Town<input type="text" name="town" placeholder="Defaults to area name"></label>
+        <label>County<input type="text" name="county" value="Mayo"></label>
+        <label>Min score<input type="number" name="min_score" min="0" max="1" step="0.01" value="0.68"></label>
+        <label>Min gap<input type="number" name="min_gap" min="0" max="1" step="0.01" value="0.04"></label>
+        <label class="checkbox"><input type="checkbox" name="include_existing">Include venues with saved pages</label>
+      </div>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview links</button>
+        <button type="submit" name="action" value="apply" class="secondary">Save confident links</button>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_update_venue_profile_link') }}" class="dashboard-form admin-tool-card">
+      <h3>3. Confirm a venue Facebook page</h3>
+      <p class="muted">Use this when discovery cannot confidently match a venue.</p>
+      <div class="form-grid">
+        <label>Venue<select name="venue_id" required>
+          {% for venue in venues %}
+            <option value="{{ venue['id'] }}">{{ venue["name"] }} · {{ venue["area_name"] }}</option>
+          {% endfor %}
+        </select></label>
+        <label>Facebook URL<input type="url" name="social_facebook" placeholder="https://www.facebook.com/example/" required></label>
+      </div>
+      <button type="submit">Save official page</button>
+    </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_apify_event_sync') }}" class="dashboard-form admin-tool-card">
+      <h3>4. Collect events from Facebook</h3>
+      <p class="muted">Preview event candidates from approved Facebook pages, then save as drafts or publish.</p>
+      <div class="form-grid">
+        <label>Area<select name="area" required>
+          {% for area in areas %}
+            <option value="{{ area['slug'] }}">{{ area["name"] }}</option>
+          {% endfor %}
+        </select></label>
+        <label>Venue slug optional<input type="text" name="venue_slug" placeholder="bar-square-ballina"></label>
+        <label>Posts per page<input type="number" name="posts_per_page" min="1" max="25" value="5"></label>
+        <label>Newer than<input type="text" name="newer_than" value="3 months"></label>
+        <label class="checkbox"><input type="checkbox" name="skip_past" checked>Skip past events</label>
+        <label class="checkbox"><input type="checkbox" name="publish">Publish saved events</label>
+        <label class="checkbox"><input type="checkbox" name="no_ai_cleanup">Disable AI cleanup</label>
+      </div>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview events</button>
+        <button type="submit" name="action" value="apply" class="secondary">Save events</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endif %}
 
 <section class="content-grid detail-grid">
   <div class="list-column">
@@ -20,10 +120,14 @@
             <label>Opens<input type="time" name="opens_at" value="{{ venue['opens_at'] }}" required></label>
             <label>Closes<input type="time" name="closes_at" value="{{ venue['closes_at'] }}" required></label>
             <label>Price band<input type="text" name="price_band" value="{{ venue['price_band'] }}" required></label>
+            <label>Facebook<input type="url" name="social_facebook" value="{{ venue['social_facebook'] or '' }}"></label>
+            <label>Website<input type="url" name="social_website" value="{{ venue['social_website'] or '' }}"></label>
             <label>Source type<input type="text" name="source_type" value="{{ venue['source_type'] }}" required></label>
             <label>Source URL<input type="url" name="source_url" value="{{ venue['source_url'] or '' }}"></label>
             <label>Status<input type="text" name="sync_status" value="{{ venue['sync_status'] }}" required></label>
             <label>Confidence<input type="number" step="0.01" min="0" max="1" name="confidence" value="{{ venue['confidence'] }}" required></label>
+            <input type="hidden" name="publish_control" value="1">
+            <label class="checkbox"><input type="checkbox" name="is_published" {% if venue['is_published'] %}checked{% endif %}>Published</label>
           </div>
           <button type="submit">Save venue</button>
         </form>

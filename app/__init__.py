@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from flask import Flask
@@ -9,9 +10,9 @@ from .db import close_db, init_app
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_mapping(
-        SECRET_KEY="dev-secret-key",
-        DATABASE=str(Path(app.root_path).parent / "nightlife.db"),
-        OSRM_BASE_URL="https://router.project-osrm.org",
+        SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key"),
+        DATABASE=os.environ.get("DATABASE_URL", str(Path(app.root_path).parent / "nightlife.db")),
+        OSRM_BASE_URL=os.environ.get("OSRM_BASE_URL", "https://router.project-osrm.org"),
     )
 
     if test_config:

@@ -1,9 +1,19 @@
+import os
+from pathlib import Path
 from datetime import UTC, datetime
 from functools import wraps
 
 import requests
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from flask import current_app
+
+from app.ai_event_cleaner import ai_cleanup_enabled, clean_event_with_ai
+from app.apify_facebook import extract_events_from_posts, run_facebook_posts_scraper
+from app.facebook_page_discovery import best_confident_candidate, discover_facebook_page_candidates
+from app.google_places import GooglePlacesClient, ensure_google_place_columns, load_env_file
+
+from import_ballina_google_places import area_slug_for, collect_places, fetch_or_create_area, load_town_bounds, upsert_place
+from sync_facebook_events_apify import event_is_past, load_facebook_venues, upsert_event
 
 from .db import get_db
 
@@ -16,6 +26,63 @@ def current_user():
     if not user_id:
         return None
     return get_db().execute("SELECT id, username, role, venue_id FROM users WHERE id = ?", (user_id,)).fetchone()
+
+
+def dashboard_report():
+    return session.pop("dashboard_report", None)
+
+
+def set_dashboard_report(title, rows, summary=None):
+    session["dashboard_report"] = {
+        "title": title,
+        "summary": summary or "",
+        "rows": rows[:80],
+    }
+
+
+def request_action():
+    action = request.form.get("action", "preview").strip().lower()
+    if action not in {"preview", "apply"}:
+        abort(400)
+    return action
+
+
+def require_non_empty_form(*fields):
+    values = {field: request.form.get(field, "").strip() for field in fields}
+    if any(not value for value in values.values()):
+        flash("Please complete all required admin tool fields.", "error")
+        return None
+    return values
+
+
+def parse_positive_int(name, default, maximum):
+    value = request.form.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        parsed = int(value)
+    except ValueError:
+        abort(400)
+    return max(1, min(maximum, parsed))
+
+
+def parse_float_form(name, default):
+    value = request.form.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        abort(400)
+
+
+def env_value(name):
+    load_env_file()
+    return os.environ.get(name, "").strip()
+
+
+def town_from_area_name(area_name):
+    return area_name.replace(" Town", "").strip() or area_name
 
 
 def login_required(role=None):
@@ -455,16 +522,18 @@ def dashboard():
     db = get_db()
     if user["role"] == "admin":
         venues = db.execute("SELECT v.*, a.name AS area_name FROM venues v JOIN areas a ON a.id = v.area_id ORDER BY a.name, v.name").fetchall()
+        areas = db.execute("SELECT * FROM areas ORDER BY name").fetchall()
         claims = db.execute("SELECT vc.*, v.name AS venue_name FROM venue_claims vc JOIN venues v ON v.id = vc.venue_id ORDER BY vc.created_at DESC").fetchall()
     else:
         venues = db.execute("SELECT v.*, a.name AS area_name FROM venues v JOIN areas a ON a.id = v.area_id WHERE v.claimed_by_user_id = ? ORDER BY v.name", (user["id"],)).fetchall()
+        areas = []
         claims = []
     events = []
     if venues:
         ids = [venue["id"] for venue in venues]
         query = ",".join("?" for _ in ids)
         events = db.execute(f"SELECT e.*, v.name AS venue_name FROM events e JOIN venues v ON v.id = e.venue_id WHERE e.venue_id IN ({query}) ORDER BY e.start_at ASC", ids).fetchall()
-    return render_template("dashboard.html", user=user, venues=venues, events=events, claims=claims)
+    return render_template("dashboard.html", user=user, venues=venues, events=events, claims=claims, areas=areas, admin_report=dashboard_report())
 
 
 @bp.post("/dashboard/venues/<int:venue_id>")
@@ -473,12 +542,27 @@ def update_venue(venue_id):
     user = current_user()
     if not can_manage_venue(user, venue_id):
         abort(403)
+    existing = get_db().execute("SELECT is_published FROM venues WHERE id = ?", (venue_id,)).fetchone()
+    if existing is None:
+        abort(404)
+    is_published = 1 if request.form.get("is_published") == "on" else 0
+    if request.form.get("publish_control") != "1":
+        is_published = existing["is_published"]
     get_db().execute(
-        "UPDATE venues SET opens_at = ?, closes_at = ?, price_band = ?, source_type = ?, source_url = ?, sync_status = ?, confidence = ?, last_verified_at = ? WHERE id = ?",
+        """
+        UPDATE venues
+        SET opens_at = ?, closes_at = ?, price_band = ?, social_facebook = ?, social_website = ?,
+            is_published = ?, source_type = ?, source_url = ?, sync_status = ?, confidence = ?,
+            last_verified_at = ?
+        WHERE id = ?
+        """,
         (
             request.form.get("opens_at", "").strip(),
             request.form.get("closes_at", "").strip(),
             request.form.get("price_band", "").strip(),
+            request.form.get("social_facebook", "").strip(),
+            request.form.get("social_website", "").strip(),
+            is_published,
             request.form.get("source_type", "").strip() or "owner",
             request.form.get("source_url", "").strip(),
             request.form.get("sync_status", "").strip() or "owner-updated",
@@ -518,6 +602,235 @@ def update_event(event_id):
     )
     db.commit()
     flash("Event updated.", "success")
+    return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/google-places")
+@login_required(role="admin")
+def admin_google_places_import():
+    values = require_non_empty_form("town", "county")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    area_slug = request.form.get("area_slug", "").strip() or area_slug_for(values["town"])
+    api_key = env_value("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        flash("GOOGLE_MAPS_API_KEY is missing. Add it to your environment before importing venues.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    try:
+        client = GooglePlacesClient(api_key)
+        bounds = load_town_bounds(values["town"], values["county"])
+        places = collect_places(client, values["town"], values["county"], bounds)
+    except requests.RequestException as exc:
+        flash(f"Google Places request failed: {exc}", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    rows = [
+        {
+            "status": "ready" if action == "preview" else "saved",
+            "primary": place.name,
+            "secondary": f"{place.inferred_type} | {place.address}",
+            "url": place.google_maps_uri,
+        }
+        for place in places
+    ]
+
+    inserted = updated = 0
+    if action == "apply" and places:
+        db = get_db()
+        ensure_google_place_columns(db)
+        area = fetch_or_create_area(db, values["town"], values["county"], area_slug, places, True, bounds)
+        for place in places:
+            result = upsert_place(db, area["id"], values["town"], place)
+            if result == "inserted":
+                inserted += 1
+            else:
+                updated += 1
+        db.commit()
+        flash(f"Saved Google Places venues for {values['town']}. Inserted {inserted}, updated {updated}.", "success")
+    elif not places:
+        flash(f"No Google Places pub/bar results found for {values['town']}, Co. {values['county']}.", "error")
+    else:
+        flash(f"Previewed {len(places)} Google Places venue result(s). Nothing was saved yet.", "success")
+
+    set_dashboard_report(
+        f"Google Places {'save' if action == 'apply' else 'preview'}: {values['town']}",
+        rows,
+        f"{len(places)} result(s). Area slug: {area_slug}.",
+    )
+    return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/facebook-pages")
+@login_required(role="admin")
+def admin_facebook_page_discovery():
+    values = require_non_empty_form("area")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    min_score = parse_float_form("min_score", 0.68)
+    min_gap = parse_float_form("min_gap", 0.04)
+    include_existing = request.form.get("include_existing") == "on"
+    db = get_db()
+    area = db.execute("SELECT * FROM areas WHERE slug = ?", (values["area"],)).fetchone()
+    if area is None:
+        flash("Selected area was not found.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    venues = db.execute(
+        """
+        SELECT v.id, v.name, v.slug, v.social_facebook, v.social_website, a.name AS area_name
+        FROM venues v
+        JOIN areas a ON a.id = v.area_id
+        WHERE a.slug = ?
+          AND (? = 1 OR v.social_facebook IS NULL OR v.social_facebook = '')
+        ORDER BY v.name
+        """,
+        (values["area"], 1 if include_existing else 0),
+    ).fetchall()
+    if not venues:
+        flash("No venues need Facebook discovery in that area.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    town = request.form.get("town", "").strip() or town_from_area_name(area["name"])
+    county = request.form.get("county", "").strip() or "Mayo"
+    rows = []
+    applied = 0
+    for venue in venues:
+        try:
+            candidates = discover_facebook_page_candidates(
+                venue_name=venue["name"],
+                town=town,
+                county=county,
+                website_url=venue["social_website"],
+                max_candidates=5,
+            )
+        except requests.RequestException as exc:
+            rows.append({"status": "error", "primary": venue["name"], "secondary": str(exc), "url": None})
+            continue
+
+        selected = best_confident_candidate(candidates, min_score=min_score, min_gap=min_gap)
+        if selected and action == "apply":
+            db.execute("UPDATE venues SET social_facebook = ?, last_verified_at = ? WHERE id = ?", (selected.url, datetime.now(UTC).isoformat(timespec="seconds"), venue["id"]))
+            applied += 1
+        top = selected or (candidates[0] if candidates else None)
+        rows.append(
+            {
+                "status": "saved" if selected and action == "apply" else "ready" if selected else "needs-review" if candidates else "no-match",
+                "primary": venue["name"],
+                "secondary": f"Score {top.score:.2f}: {top.title}" if top else "No likely Facebook page found",
+                "url": top.url if top else None,
+            }
+        )
+
+    if action == "apply":
+        db.commit()
+        flash(f"Saved {applied} confident Facebook page link(s).", "success")
+    else:
+        flash("Facebook page discovery preview complete. Nothing was saved yet.", "success")
+    set_dashboard_report(f"Facebook discovery: {area['name']}", rows, f"Checked {len(venues)} venue(s).")
+    return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/venue-profile")
+@login_required(role="admin")
+def admin_update_venue_profile_link():
+    values = require_non_empty_form("venue_id", "social_facebook")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    try:
+        venue_id = int(values["venue_id"])
+    except ValueError:
+        abort(400)
+    if "facebook.com" not in values["social_facebook"].lower():
+        flash("Please enter a Facebook page URL.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+    db = get_db()
+    venue = db.execute("SELECT name FROM venues WHERE id = ?", (venue_id,)).fetchone()
+    if venue is None:
+        abort(404)
+    db.execute("UPDATE venues SET social_facebook = ?, last_verified_at = ? WHERE id = ?", (values["social_facebook"], datetime.now(UTC).isoformat(timespec="seconds"), venue_id))
+    db.commit()
+    flash(f"Saved Facebook page for {venue['name']}.", "success")
+    set_dashboard_report("Manual Facebook page update", [{"status": "saved", "primary": venue["name"], "secondary": "Official profile link saved", "url": values["social_facebook"]}])
+    return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/apify-events")
+@login_required(role="admin")
+def admin_apify_event_sync():
+    values = require_non_empty_form("area")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    token = env_value("APIFY_API_TOKEN")
+    if not token:
+        flash("APIFY_API_TOKEN is missing. Add it to your environment before syncing Facebook events.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    posts_per_page = parse_positive_int("posts_per_page", 5, 25)
+    newer_than = request.form.get("newer_than", "3 months").strip() or "3 months"
+    venue_slug = request.form.get("venue_slug", "").strip() or None
+    skip_past = request.form.get("skip_past") == "on"
+    publish = request.form.get("publish") == "on"
+    no_ai_cleanup = request.form.get("no_ai_cleanup") == "on"
+
+    try:
+        venues = load_facebook_venues(values["area"], venue_slug)
+    except Exception as exc:
+        flash(f"Could not load Facebook venues: {exc}", "error")
+        return redirect(url_for("nightlife.dashboard"))
+    if not venues:
+        flash("No venues with saved Facebook page URLs were found for that selection.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    rows = []
+    imported = 0
+    for venue in venues:
+        try:
+            posts = run_facebook_posts_scraper(token=token, page_url=venue["social_facebook"], results_limit=posts_per_page, newer_than=newer_than)
+            events = extract_events_from_posts(posts, venue["name"])
+            if skip_past:
+                events = [event for event in events if not event_is_past(event.start_at)]
+            if not no_ai_cleanup and ai_cleanup_enabled():
+                for event in events:
+                    try:
+                        cleaned = clean_event_with_ai(event.to_dict(), venue["name"], event.post_text, image_url=event.image_url)
+                    except requests.RequestException:
+                        cleaned = None
+                    if cleaned is None:
+                        continue
+                    event.title = cleaned.title
+                    event.description = cleaned.description
+                    event.genre = cleaned.genre
+                    event.price_label = cleaned.price_label
+                    event.price_amount = cleaned.price_amount
+                    event.confidence = min(1.0, (event.confidence + cleaned.confidence) / 2)
+                    if cleaned.needs_review:
+                        event.confidence = min(event.confidence, 0.62)
+            for event in events:
+                if action == "apply" and upsert_event(venue["id"], event, publish=publish):
+                    imported += 1
+                rows.append(
+                    {
+                        "status": "published" if action == "apply" and publish else "saved" if action == "apply" else "ready",
+                        "primary": f"{event.title} | {venue['name']}",
+                        "secondary": f"{event.start_at} | {event.genre} | confidence {event.confidence:.2f}",
+                        "url": event.source_url,
+                    }
+                )
+            if not events:
+                rows.append({"status": "no-events", "primary": venue["name"], "secondary": f"Checked {len(posts)} post(s); no event detected.", "url": venue["social_facebook"]})
+        except (requests.RequestException, ValueError) as exc:
+            rows.append({"status": "error", "primary": venue["name"], "secondary": str(exc), "url": venue["social_facebook"]})
+
+    if action == "apply":
+        get_db().commit()
+        flash(f"Event sync saved {imported} new event(s). Existing matching events may have been updated.", "success")
+    else:
+        flash("Event sync preview complete. Nothing was saved yet.", "success")
+    set_dashboard_report("Apify event sync", rows, f"Checked {len(venues)} venue page(s).")
     return redirect(url_for("nightlife.dashboard"))
 
 

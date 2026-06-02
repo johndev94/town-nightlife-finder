@@ -201,9 +201,9 @@ def upsert_event(venue_id: int, event, publish: bool) -> bool:
             SET description = ?, genre = ?, end_at = ?, price_label = ?, price_amount = ?, image_url = ?,
                 currency = 'EUR', is_published = ?, source_type = 'facebook-apify',
                 source_url = ?, sync_status = 'needs-review', confidence = ?, last_verified_at = ?
-            WHERE venue_id = ? AND LOWER(title) = LOWER(?) AND start_at = ?
+            WHERE id = ?
             """,
-            values,
+            (*values[:10], existing["id"]),
         )
         return False
 
