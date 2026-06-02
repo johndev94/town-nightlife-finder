@@ -269,3 +269,37 @@ Useful options:
 - `--min-score 0.78` raises the confidence threshold.
 - `--min-gap 0.12` requires a bigger lead over the second-best candidate.
 - `--output facebook-pages.json` writes the full report to disk.
+
+## Admin Data Pipeline
+
+Logged-in admins can run the same safe data services from `/dashboard`:
+
+- Preview or save Google Places venues for a town.
+- Preview or save confident Facebook page matches.
+- Manually confirm a venue Facebook URL.
+- Preview Apify event candidates from saved Facebook pages.
+- Save event candidates as drafts or publish them immediately.
+
+These dashboard actions call fixed backend service functions. They do not expose shell access or arbitrary command execution.
+
+## Public Test Deployment
+
+Recommended environment variables:
+
+```text
+SECRET_KEY=use-a-long-random-secret
+DATABASE_URL=nightlife.db
+GOOGLE_MAPS_API_KEY=...
+APIFY_API_TOKEN=...
+OPENAI_API_KEY=...
+OPENAI_EVENT_CLEANUP_MODEL=gpt-4.1-mini
+OSRM_BASE_URL=https://router.project-osrm.org
+```
+
+Basic hosted setup:
+
+1. Build the frontend locally or in CI with `cd frontend && npm install && npm run build`.
+2. Install Python dependencies with `pip install -r requirements.txt`.
+3. Start the web process with `gunicorn "app:create_app()"`.
+4. On Render/Railway-style hosts, the included `Procfile` can be used as the web command.
+5. Change the demo admin password before sharing the test URL publicly.
