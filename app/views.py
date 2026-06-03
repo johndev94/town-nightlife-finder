@@ -12,7 +12,7 @@ from app.apify_facebook import extract_events_from_posts, run_facebook_posts_scr
 from app.facebook_page_discovery import best_confident_candidate, discover_facebook_page_candidates
 from app.google_places import GooglePlacesClient, ensure_google_place_columns, load_env_file
 
-from import_ballina_google_places import area_slug_for, collect_places, fetch_or_create_area, load_town_bounds, upsert_place
+from import_ballina_google_places import area_slug_for, collect_places, fetch_or_create_area, load_town_bounds, slugify, upsert_place
 from sync_facebook_events_apify import event_is_past, load_facebook_venues, upsert_event
 
 from .db import get_db
@@ -32,12 +32,166 @@ def dashboard_report():
     return session.pop("dashboard_report", None)
 
 
+def dashboard_admin_summary():
+    db = get_db()
+    counts = db.execute(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM areas) AS area_count,
+            (SELECT COUNT(*) FROM venues) AS venue_count,
+            (SELECT COUNT(*) FROM venues WHERE is_published = 1) AS published_venue_count,
+            (SELECT COUNT(*) FROM venues WHERE is_published = 0) AS draft_venue_count,
+            (SELECT COUNT(*) FROM venues WHERE social_facebook IS NULL OR social_facebook = '') AS missing_facebook_count,
+            (SELECT COUNT(*) FROM venues WHERE social_facebook IS NOT NULL AND social_facebook != '') AS facebook_ready_count,
+            (SELECT COUNT(*) FROM events) AS event_count,
+            (SELECT COUNT(*) FROM events WHERE is_published = 1) AS published_event_count,
+            (SELECT COUNT(*) FROM events WHERE is_published = 0) AS draft_event_count,
+            (SELECT COUNT(*) FROM events WHERE confidence < 0.7 OR sync_status LIKE '%review%') AS needs_review_event_count,
+            (SELECT COUNT(*) FROM venue_claims WHERE status = 'pending') AS pending_claim_count
+        """
+    ).fetchone()
+    area_rows = db.execute(
+        """
+        SELECT
+            a.name,
+            a.slug,
+            COUNT(DISTINCT v.id) AS venue_count,
+            COUNT(DISTINCT CASE WHEN v.is_published = 1 THEN v.id END) AS published_venue_count,
+            COUNT(DISTINCT CASE WHEN v.social_facebook IS NULL OR v.social_facebook = '' THEN v.id END) AS missing_facebook_count,
+            COUNT(DISTINCT e.id) AS event_count,
+            COUNT(DISTINCT CASE WHEN e.is_published = 1 THEN e.id END) AS published_event_count
+        FROM areas a
+        LEFT JOIN venues v ON v.area_id = a.id
+        LEFT JOIN events e ON e.venue_id = v.id
+        GROUP BY a.id
+        ORDER BY a.name
+        """
+    ).fetchall()
+    needs_facebook = db.execute(
+        """
+        SELECT v.id, v.name, v.slug, a.name AS area_name
+        FROM venues v
+        JOIN areas a ON a.id = v.area_id
+        WHERE v.social_facebook IS NULL OR v.social_facebook = ''
+        ORDER BY a.name, v.name
+        LIMIT 8
+        """
+    ).fetchall()
+    venue_drafts = db.execute(
+        """
+        SELECT v.id, v.name, v.slug, a.name AS area_name, v.sync_status
+        FROM venues v
+        JOIN areas a ON a.id = v.area_id
+        WHERE v.is_published = 0 OR v.sync_status LIKE '%review%'
+        ORDER BY v.is_published ASC, a.name, v.name
+        LIMIT 8
+        """
+    ).fetchall()
+    event_drafts = db.execute(
+        """
+        SELECT e.id, e.title, e.start_at, e.confidence, e.is_published, e.sync_status, v.name AS venue_name
+        FROM events e
+        JOIN venues v ON v.id = e.venue_id
+        WHERE e.is_published = 0 OR e.confidence < 0.7 OR e.sync_status LIKE '%review%'
+        ORDER BY e.is_published ASC, e.start_at ASC
+        LIMIT 8
+        """
+    ).fetchall()
+    return {"counts": counts, "areas": area_rows, "needs_facebook": needs_facebook, "venue_drafts": venue_drafts, "event_drafts": event_drafts}
+
+
 def set_dashboard_report(title, rows, summary=None):
+    status_counts = {}
+    for row in rows:
+        status = row.get("status", "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
     session["dashboard_report"] = {
         "title": title,
         "summary": summary or "",
         "rows": rows[:80],
+        "status_counts": status_counts,
     }
+
+
+def venue_report_row(status, primary, secondary, url=None, venue_id=None):
+    return {
+        "status": status,
+        "primary": primary,
+        "secondary": secondary,
+        "url": url,
+        "entity": "venue",
+        "entity_id": venue_id,
+    }
+
+
+def event_report_row(status, primary, secondary, url=None, event_id=None):
+    return {
+        "status": status,
+        "primary": primary,
+        "secondary": secondary,
+        "url": url,
+        "entity": "event",
+        "entity_id": event_id,
+    }
+
+
+def venue_id_for_google_place(db, place):
+    row = db.execute("SELECT id FROM venues WHERE google_place_id = ? OR slug = ?", (place.place_id, slugify(place.name))).fetchone()
+    return row["id"] if row else None
+
+
+def event_id_for_sync(venue_id, event):
+    row = get_db().execute(
+        """
+        SELECT id FROM events
+        WHERE venue_id = ?
+          AND start_at = ?
+          AND (source_url = ? OR LOWER(title) = LOWER(?))
+        ORDER BY last_verified_at DESC
+        LIMIT 1
+        """,
+        (venue_id, event.start_at, event.source_url, event.title),
+    ).fetchone()
+    return row["id"] if row else None
+
+
+def dashboard_queue():
+    queue = request.args.get("queue", "all").strip().lower()
+    allowed = {"all", "needs-facebook", "draft-pubs", "draft-events", "low-confidence", "published"}
+    return queue if queue in allowed else "all"
+
+
+def dashboard_queue_counts():
+    db = get_db()
+    return db.execute(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM venues) AS all_count,
+            (SELECT COUNT(*) FROM venues WHERE social_facebook IS NULL OR social_facebook = '') AS needs_facebook_count,
+            (SELECT COUNT(*) FROM venues WHERE is_published = 0 OR sync_status LIKE '%review%') AS draft_pubs_count,
+            (SELECT COUNT(*) FROM events WHERE is_published = 0 OR sync_status LIKE '%review%') AS draft_events_count,
+            (SELECT COUNT(*) FROM events WHERE confidence < 0.7) AS low_confidence_count,
+            (SELECT COUNT(*) FROM venues WHERE is_published = 1) + (SELECT COUNT(*) FROM events WHERE is_published = 1) AS published_count
+        """
+    ).fetchone()
+
+
+def queue_label(queue):
+    return {
+        "all": "All records",
+        "needs-facebook": "Needs Facebook",
+        "draft-pubs": "Draft pubs",
+        "draft-events": "Draft events",
+        "low-confidence": "Low confidence events",
+        "published": "Published",
+    }.get(queue, "All records")
+
+
+def dashboard_redirect():
+    queue = request.form.get("queue", "").strip()
+    if queue:
+        return redirect(url_for("nightlife.dashboard", queue=queue))
+    return redirect(url_for("nightlife.dashboard"))
 
 
 def request_action():
@@ -520,20 +674,116 @@ def can_manage_venue(user, venue_id):
 def dashboard():
     user = current_user()
     db = get_db()
+    admin_summary = None
+    queue = dashboard_queue()
+    queue_counts = None
+    all_venues = []
     if user["role"] == "admin":
-        venues = db.execute("SELECT v.*, a.name AS area_name FROM venues v JOIN areas a ON a.id = v.area_id ORDER BY a.name, v.name").fetchall()
+        venue_filter = ""
+        event_filter = ""
+        if queue == "needs-facebook":
+            venue_filter = "WHERE v.social_facebook IS NULL OR v.social_facebook = ''"
+            event_filter = "AND 1 = 0"
+        elif queue == "draft-pubs":
+            venue_filter = "WHERE v.is_published = 0 OR v.sync_status LIKE '%review%'"
+            event_filter = "AND 1 = 0"
+        elif queue == "draft-events":
+            venue_filter = "WHERE 1 = 0"
+            event_filter = "AND (e.is_published = 0 OR e.sync_status LIKE '%review%')"
+        elif queue == "low-confidence":
+            venue_filter = "WHERE 1 = 0"
+            event_filter = "AND e.confidence < 0.7"
+        elif queue == "published":
+            venue_filter = "WHERE v.is_published = 1"
+            event_filter = "AND e.is_published = 1"
+
+        venues = db.execute(
+            f"""
+            SELECT
+                v.*,
+                a.name AS area_name,
+                COUNT(e.id) AS event_count,
+                COUNT(CASE WHEN e.is_published = 1 THEN 1 END) AS published_event_count,
+                MAX(e.start_at) AS latest_event_start
+            FROM venues v
+            JOIN areas a ON a.id = v.area_id
+            LEFT JOIN events e ON e.venue_id = v.id
+            {venue_filter}
+            GROUP BY v.id
+            ORDER BY a.name, v.name
+            """
+        ).fetchall()
+        all_venues = db.execute(
+            """
+            SELECT v.id, v.name, v.slug, v.social_facebook, v.social_website, a.name AS area_name
+            FROM venues v
+            JOIN areas a ON a.id = v.area_id
+            ORDER BY a.name, v.name
+            """
+        ).fetchall()
         areas = db.execute("SELECT * FROM areas ORDER BY name").fetchall()
         claims = db.execute("SELECT vc.*, v.name AS venue_name FROM venue_claims vc JOIN venues v ON v.id = vc.venue_id ORDER BY vc.created_at DESC").fetchall()
+        admin_summary = dashboard_admin_summary()
+        queue_counts = dashboard_queue_counts()
     else:
-        venues = db.execute("SELECT v.*, a.name AS area_name FROM venues v JOIN areas a ON a.id = v.area_id WHERE v.claimed_by_user_id = ? ORDER BY v.name", (user["id"],)).fetchall()
+        venues = db.execute(
+            """
+            SELECT
+                v.*,
+                a.name AS area_name,
+                COUNT(e.id) AS event_count,
+                COUNT(CASE WHEN e.is_published = 1 THEN 1 END) AS published_event_count,
+                MAX(e.start_at) AS latest_event_start
+            FROM venues v
+            JOIN areas a ON a.id = v.area_id
+            LEFT JOIN events e ON e.venue_id = v.id
+            WHERE v.claimed_by_user_id = ?
+            GROUP BY v.id
+            ORDER BY v.name
+            """,
+            (user["id"],),
+        ).fetchall()
         areas = []
         claims = []
+        event_filter = ""
     events = []
-    if venues:
+    if user["role"] == "admin":
+        events = db.execute(
+            f"""
+            SELECT e.*, v.name AS venue_name
+            FROM events e
+            JOIN venues v ON v.id = e.venue_id
+            WHERE 1 = 1 {event_filter}
+            ORDER BY e.is_published ASC, e.start_at ASC
+            """
+        ).fetchall()
+    elif venues:
         ids = [venue["id"] for venue in venues]
         query = ",".join("?" for _ in ids)
-        events = db.execute(f"SELECT e.*, v.name AS venue_name FROM events e JOIN venues v ON v.id = e.venue_id WHERE e.venue_id IN ({query}) ORDER BY e.start_at ASC", ids).fetchall()
-    return render_template("dashboard.html", user=user, venues=venues, events=events, claims=claims, areas=areas, admin_report=dashboard_report())
+        events = db.execute(
+            f"""
+            SELECT e.*, v.name AS venue_name
+            FROM events e
+            JOIN venues v ON v.id = e.venue_id
+            WHERE e.venue_id IN ({query})
+            ORDER BY e.is_published ASC, e.start_at ASC
+            """,
+            ids,
+        ).fetchall()
+    return render_template(
+        "dashboard.html",
+        user=user,
+        venues=venues,
+        all_venues=all_venues or venues,
+        events=events,
+        claims=claims,
+        areas=areas,
+        admin_report=dashboard_report(),
+        admin_summary=admin_summary,
+        queue=queue,
+        queue_label=queue_label(queue),
+        queue_counts=queue_counts,
+    )
 
 
 @bp.post("/dashboard/venues/<int:venue_id>")
@@ -573,7 +823,7 @@ def update_venue(venue_id):
     )
     get_db().commit()
     flash("Venue details updated.", "success")
-    return redirect(url_for("nightlife.dashboard"))
+    return dashboard_redirect()
 
 
 @bp.post("/dashboard/events/<int:event_id>")
@@ -602,7 +852,7 @@ def update_event(event_id):
     )
     db.commit()
     flash("Event updated.", "success")
-    return redirect(url_for("nightlife.dashboard"))
+    return dashboard_redirect()
 
 
 @bp.post("/dashboard/admin-tools/google-places")
@@ -627,12 +877,12 @@ def admin_google_places_import():
         return redirect(url_for("nightlife.dashboard"))
 
     rows = [
-        {
-            "status": "ready" if action == "preview" else "saved",
-            "primary": place.name,
-            "secondary": f"{place.inferred_type} | {place.address}",
-            "url": place.google_maps_uri,
-        }
+        venue_report_row(
+            "ready" if action == "preview" else "saved",
+            place.name,
+            f"{place.inferred_type} | {place.address}",
+            place.google_maps_uri,
+        )
         for place in places
     ]
 
@@ -643,6 +893,10 @@ def admin_google_places_import():
         area = fetch_or_create_area(db, values["town"], values["county"], area_slug, places, True, bounds)
         for place in places:
             result = upsert_place(db, area["id"], values["town"], place)
+            venue_id = venue_id_for_google_place(db, place)
+            for row in rows:
+                if row["primary"] == place.name:
+                    row["entity_id"] = venue_id
             if result == "inserted":
                 inserted += 1
             else:
@@ -707,7 +961,7 @@ def admin_facebook_page_discovery():
                 max_candidates=5,
             )
         except requests.RequestException as exc:
-            rows.append({"status": "error", "primary": venue["name"], "secondary": str(exc), "url": None})
+            rows.append(venue_report_row("error", venue["name"], str(exc), None, venue["id"]))
             continue
 
         selected = best_confident_candidate(candidates, min_score=min_score, min_gap=min_gap)
@@ -716,12 +970,13 @@ def admin_facebook_page_discovery():
             applied += 1
         top = selected or (candidates[0] if candidates else None)
         rows.append(
-            {
-                "status": "saved" if selected and action == "apply" else "ready" if selected else "needs-review" if candidates else "no-match",
-                "primary": venue["name"],
-                "secondary": f"Score {top.score:.2f}: {top.title}" if top else "No likely Facebook page found",
-                "url": top.url if top else None,
-            }
+            venue_report_row(
+                "saved" if selected and action == "apply" else "ready" if selected else "needs-review" if candidates else "no-match",
+                venue["name"],
+                f"Score {top.score:.2f}: {top.title}" if top else "No likely Facebook page found",
+                top.url if top else None,
+                venue["id"],
+            )
         )
 
     if action == "apply":
@@ -753,7 +1008,7 @@ def admin_update_venue_profile_link():
     db.execute("UPDATE venues SET social_facebook = ?, last_verified_at = ? WHERE id = ?", (values["social_facebook"], datetime.now(UTC).isoformat(timespec="seconds"), venue_id))
     db.commit()
     flash(f"Saved Facebook page for {venue['name']}.", "success")
-    set_dashboard_report("Manual Facebook page update", [{"status": "saved", "primary": venue["name"], "secondary": "Official profile link saved", "url": values["social_facebook"]}])
+    set_dashboard_report("Manual Facebook page update", [venue_report_row("saved", venue["name"], "Official profile link saved", values["social_facebook"], venue_id)])
     return redirect(url_for("nightlife.dashboard"))
 
 
@@ -810,20 +1065,24 @@ def admin_apify_event_sync():
                     if cleaned.needs_review:
                         event.confidence = min(event.confidence, 0.62)
             for event in events:
-                if action == "apply" and upsert_event(venue["id"], event, publish=publish):
-                    imported += 1
+                event_id = None
+                if action == "apply":
+                    if upsert_event(venue["id"], event, publish=publish):
+                        imported += 1
+                    event_id = event_id_for_sync(venue["id"], event)
                 rows.append(
-                    {
-                        "status": "published" if action == "apply" and publish else "saved" if action == "apply" else "ready",
-                        "primary": f"{event.title} | {venue['name']}",
-                        "secondary": f"{event.start_at} | {event.genre} | confidence {event.confidence:.2f}",
-                        "url": event.source_url,
-                    }
+                    event_report_row(
+                        "published" if action == "apply" and publish else "saved" if action == "apply" else "ready",
+                        f"{event.title} | {venue['name']}",
+                        f"{event.start_at} | {event.genre} | confidence {event.confidence:.2f}",
+                        event.source_url,
+                        event_id,
+                    )
                 )
             if not events:
-                rows.append({"status": "no-events", "primary": venue["name"], "secondary": f"Checked {len(posts)} post(s); no event detected.", "url": venue["social_facebook"]})
+                rows.append(venue_report_row("no-events", venue["name"], f"Checked {len(posts)} post(s); no event detected.", venue["social_facebook"], venue["id"]))
         except (requests.RequestException, ValueError) as exc:
-            rows.append({"status": "error", "primary": venue["name"], "secondary": str(exc), "url": venue["social_facebook"]})
+            rows.append(venue_report_row("error", venue["name"], str(exc), venue["social_facebook"], venue["id"]))
 
     if action == "apply":
         get_db().commit()
@@ -832,6 +1091,115 @@ def admin_apify_event_sync():
         flash("Event sync preview complete. Nothing was saved yet.", "success")
     set_dashboard_report("Apify event sync", rows, f"Checked {len(venues)} venue page(s).")
     return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/publish-venue/<int:venue_id>")
+@login_required(role="admin")
+def admin_publish_venue(venue_id):
+    db = get_db()
+    venue = db.execute("SELECT id, name FROM venues WHERE id = ?", (venue_id,)).fetchone()
+    if venue is None:
+        abort(404)
+    db.execute(
+        "UPDATE venues SET is_published = 1, sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-approved", datetime.now(UTC).isoformat(timespec="seconds"), venue_id),
+    )
+    db.commit()
+    flash(f"Published {venue['name']} to the public website.", "success")
+    set_dashboard_report("Venue published", [venue_report_row("published", venue["name"], "Approved for public display", None, venue_id)])
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/unpublish-venue/<int:venue_id>")
+@login_required(role="admin")
+def admin_unpublish_venue(venue_id):
+    db = get_db()
+    venue = db.execute("SELECT id, name FROM venues WHERE id = ?", (venue_id,)).fetchone()
+    if venue is None:
+        abort(404)
+    db.execute(
+        "UPDATE venues SET is_published = 0, sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-unpublished", datetime.now(UTC).isoformat(timespec="seconds"), venue_id),
+    )
+    db.commit()
+    flash(f"Unpublished {venue['name']} from the public website.", "success")
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/review-venue/<int:venue_id>")
+@login_required(role="admin")
+def admin_review_venue(venue_id):
+    db = get_db()
+    venue = db.execute("SELECT id, name FROM venues WHERE id = ?", (venue_id,)).fetchone()
+    if venue is None:
+        abort(404)
+    db.execute(
+        "UPDATE venues SET sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-reviewed", datetime.now(UTC).isoformat(timespec="seconds"), venue_id),
+    )
+    db.commit()
+    flash(f"Marked {venue['name']} as reviewed.", "success")
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/publish-event/<int:event_id>")
+@login_required(role="admin")
+def admin_publish_event(event_id):
+    db = get_db()
+    event = db.execute(
+        """
+        SELECT e.id, e.title, v.name AS venue_name, v.is_published AS venue_published
+        FROM events e
+        JOIN venues v ON v.id = e.venue_id
+        WHERE e.id = ?
+        """,
+        (event_id,),
+    ).fetchone()
+    if event is None:
+        abort(404)
+    if not event["venue_published"]:
+        flash("Publish the venue first before publishing its events.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+    db.execute(
+        "UPDATE events SET is_published = 1, sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-approved", datetime.now(UTC).isoformat(timespec="seconds"), event_id),
+    )
+    db.commit()
+    flash(f"Published {event['title']} at {event['venue_name']}.", "success")
+    set_dashboard_report("Event published", [event_report_row("published", event["title"], f"Approved at {event['venue_name']}", None, event_id)])
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/unpublish-event/<int:event_id>")
+@login_required(role="admin")
+def admin_unpublish_event(event_id):
+    db = get_db()
+    event = db.execute("SELECT id, title FROM events WHERE id = ?", (event_id,)).fetchone()
+    if event is None:
+        abort(404)
+    db.execute(
+        "UPDATE events SET is_published = 0, sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-unpublished", datetime.now(UTC).isoformat(timespec="seconds"), event_id),
+    )
+    db.commit()
+    flash(f"Unpublished {event['title']} from the public website.", "success")
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/review-event/<int:event_id>")
+@login_required(role="admin")
+def admin_review_event(event_id):
+    db = get_db()
+    event = db.execute("SELECT id, title FROM events WHERE id = ?", (event_id,)).fetchone()
+    if event is None:
+        abort(404)
+    db.execute(
+        "UPDATE events SET sync_status = ?, last_verified_at = ? WHERE id = ?",
+        ("admin-reviewed", datetime.now(UTC).isoformat(timespec="seconds"), event_id),
+    )
+    db.commit()
+    flash(f"Marked {event['title']} as reviewed.", "success")
+    return dashboard_redirect()
 
 
 @bp.post("/dashboard/claims/<int:claim_id>")

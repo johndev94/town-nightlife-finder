@@ -11,6 +11,30 @@
 </section>
 
 {% if user["role"] == "admin" %}
+{% set counts = admin_summary["counts"] %}
+<section class="admin-summary-grid" aria-label="Admin data quality summary">
+  <article class="admin-summary-card">
+    <span class="summary-kicker">Published pubs</span>
+    <strong>{{ counts["published_venue_count"] }}/{{ counts["venue_count"] }}</strong>
+    <small>{{ counts["draft_venue_count"] }} waiting to publish</small>
+  </article>
+  <article class="admin-summary-card">
+    <span class="summary-kicker">Facebook ready</span>
+    <strong>{{ counts["facebook_ready_count"] }}</strong>
+    <small>{{ counts["missing_facebook_count"] }} venues need links</small>
+  </article>
+  <article class="admin-summary-card">
+    <span class="summary-kicker">Published events</span>
+    <strong>{{ counts["published_event_count"] }}/{{ counts["event_count"] }}</strong>
+    <small>{{ counts["draft_event_count"] }} drafts, {{ counts["needs_review_event_count"] }} need review</small>
+  </article>
+  <article class="admin-summary-card">
+    <span class="summary-kicker">Claim requests</span>
+    <strong>{{ counts["pending_claim_count"] }}</strong>
+    <small>{{ counts["area_count"] }} areas available</small>
+  </article>
+</section>
+
 <section class="panel admin-tools-panel">
   <div class="section-heading">
     <p class="eyebrow">Admin data pipeline</p>
@@ -20,19 +44,137 @@
 
   {% if admin_report %}
     <div class="admin-report">
-      <h3>{{ admin_report["title"] }}</h3>
-      {% if admin_report["summary"] %}<p>{{ admin_report["summary"] }}</p>{% endif %}
-      <div class="report-list">
+      <div class="report-header">
+        <div>
+          <h3>{{ admin_report["title"] }}</h3>
+          {% if admin_report["summary"] %}<p>{{ admin_report["summary"] }}</p>{% endif %}
+        </div>
+        <div class="report-counts">
+          {% for status, count in admin_report.get("status_counts", {}).items() %}
+            <span class="status-badge status-{{ status }}">{{ count }} {{ status|replace("-", " ") }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="report-table" role="table" aria-label="Admin tool review results">
+        <div class="report-table-head" role="row">
+          <span role="columnheader">Status</span>
+          <span role="columnheader">Item</span>
+          <span role="columnheader">Details</span>
+          <span role="columnheader">Source</span>
+          <span role="columnheader">Action</span>
+        </div>
         {% for row in admin_report["rows"] %}
-          <div class="report-row status-{{ row['status'] }}">
+          <div class="report-row status-{{ row['status'] }}" role="row">
+            <span class="status-badge status-{{ row['status'] }}">{{ row["status"]|replace("-", " ") }}</span>
             <strong>{{ row["primary"] }}</strong>
-            <span>{{ row["status"] }} · {{ row["secondary"] }}</span>
-            {% if row["url"] %}<a href="{{ row['url'] }}" target="_blank" rel="noreferrer">Open source</a>{% endif %}
+            <span>{{ row["secondary"] }}</span>
+            <span>{% if row["url"] %}<a href="{{ row['url'] }}" target="_blank" rel="noreferrer">Open source</a>{% else %}<span class="muted">No source</span>{% endif %}</span>
+            <span>
+              {% if row.get("entity") == "venue" and row.get("entity_id") and row["status"] in ["saved", "needs-review"] %}
+                <form method="post" action="{{ url_for('nightlife.admin_publish_venue', venue_id=row['entity_id']) }}" class="compact-action-form">
+                  <input type="hidden" name="queue" value="{{ queue }}">
+                  <button type="submit" class="mini-action">Publish pub</button>
+                </form>
+              {% elif row.get("entity") == "event" and row.get("entity_id") and row["status"] in ["saved", "needs-review"] %}
+                <form method="post" action="{{ url_for('nightlife.admin_publish_event', event_id=row['entity_id']) }}" class="compact-action-form">
+                  <input type="hidden" name="queue" value="{{ queue }}">
+                  <button type="submit" class="mini-action">Publish event</button>
+                </form>
+              {% elif row["status"] == "ready" %}
+                <span class="muted">Preview only</span>
+              {% else %}
+                <span class="muted">No action</span>
+              {% endif %}
+            </span>
           </div>
         {% endfor %}
       </div>
+      <p class="review-hint">Preview mode only shows candidates. Use the matching save button when the results look right.</p>
     </div>
   {% endif %}
+
+  <div class="area-health-panel">
+    <div>
+      <p class="eyebrow">Data quality by area</p>
+      <h3>Where to focus next</h3>
+    </div>
+    <div class="area-health-grid">
+      {% for area in admin_summary["areas"] %}
+        <article class="area-health-card">
+          <strong>{{ area["name"] }}</strong>
+          <span>{{ area["published_venue_count"] }}/{{ area["venue_count"] }} pubs live</span>
+          <span>{{ area["published_event_count"] }} live events</span>
+          {% if area["missing_facebook_count"] %}
+            <span class="quality-warning">{{ area["missing_facebook_count"] }} need Facebook links</span>
+          {% else %}
+            <span class="quality-good">Facebook links complete</span>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="attention-grid" aria-label="Records that need admin attention">
+    <section class="attention-card">
+      <div class="attention-card-head">
+        <p class="eyebrow">Needs Facebook</p>
+        <h3>Venues to link next</h3>
+      </div>
+      {% for venue in admin_summary["needs_facebook"] %}
+        <div class="attention-row">
+          <div>
+            <strong>{{ venue["name"] }}</strong>
+            <span>{{ venue["area_name"] }}</span>
+          </div>
+          <span class="status-badge status-no-match">missing link</span>
+        </div>
+      {% else %}
+        <p class="empty-state">All venues have Facebook links.</p>
+      {% endfor %}
+    </section>
+
+    <section class="attention-card">
+      <div class="attention-card-head">
+        <p class="eyebrow">Review pubs</p>
+        <h3>Venue records to approve</h3>
+      </div>
+      {% for venue in admin_summary["venue_drafts"] %}
+        <div class="attention-row">
+          <div>
+            <strong>{{ venue["name"] }}</strong>
+            <span>{{ venue["area_name"] }} - {{ venue["sync_status"] }}</span>
+          </div>
+          <form method="post" action="{{ url_for('nightlife.admin_publish_venue', venue_id=venue['id']) }}" class="compact-action-form">
+            <input type="hidden" name="queue" value="{{ queue }}">
+            <button type="submit" class="mini-action">Publish</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="empty-state">No venue records need approval.</p>
+      {% endfor %}
+    </section>
+
+    <section class="attention-card">
+      <div class="attention-card-head">
+        <p class="eyebrow">Review events</p>
+        <h3>Events to check before launch</h3>
+      </div>
+      {% for event in admin_summary["event_drafts"] %}
+        <div class="attention-row">
+          <div>
+            <strong>{{ event["title"] }}</strong>
+            <span>{{ event["venue_name"] }} - {{ event["start_at"]|datetimeformat }} - confidence {{ "%.0f"|format(event["confidence"] * 100) }}%</span>
+          </div>
+          <form method="post" action="{{ url_for('nightlife.admin_publish_event', event_id=event['id']) }}" class="compact-action-form">
+            <input type="hidden" name="queue" value="{{ queue }}">
+            <button type="submit" class="mini-action">Publish</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="empty-state">No event records need approval.</p>
+      {% endfor %}
+    </section>
+  </div>
 
   <div class="admin-tool-grid">
     <form method="post" action="{{ url_for('nightlife.admin_google_places_import') }}" class="dashboard-form admin-tool-card">
@@ -75,8 +217,8 @@
       <p class="muted">Use this when discovery cannot confidently match a venue.</p>
       <div class="form-grid">
         <label>Venue<select name="venue_id" required>
-          {% for venue in venues %}
-            <option value="{{ venue['id'] }}">{{ venue["name"] }} · {{ venue["area_name"] }}</option>
+          {% for venue in all_venues %}
+            <option value="{{ venue['id'] }}">{{ venue["name"] }} - {{ venue["area_name"] }}</option>
           {% endfor %}
         </select></label>
         <label>Facebook URL<input type="url" name="social_facebook" placeholder="https://www.facebook.com/example/" required></label>
@@ -109,13 +251,61 @@
 </section>
 {% endif %}
 
+{% if user["role"] == "admin" %}
+<section class="queue-toolbar" aria-label="Dashboard review filters">
+  <div>
+    <p class="eyebrow">Review queue</p>
+    <h2>{{ queue_label }}</h2>
+  </div>
+  <nav class="queue-tabs" aria-label="Admin dashboard queues">
+    <a class="{% if queue == 'all' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='all') }}">All <span>{{ queue_counts["all_count"] }}</span></a>
+    <a class="{% if queue == 'needs-facebook' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='needs-facebook') }}">Needs Facebook <span>{{ queue_counts["needs_facebook_count"] }}</span></a>
+    <a class="{% if queue == 'draft-pubs' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-pubs') }}">Draft pubs <span>{{ queue_counts["draft_pubs_count"] }}</span></a>
+    <a class="{% if queue == 'draft-events' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-events') }}">Draft events <span>{{ queue_counts["draft_events_count"] }}</span></a>
+    <a class="{% if queue == 'low-confidence' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='low-confidence') }}">Low confidence <span>{{ queue_counts["low_confidence_count"] }}</span></a>
+    <a class="{% if queue == 'published' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='published') }}">Published <span>{{ queue_counts["published_count"] }}</span></a>
+  </nav>
+</section>
+{% endif %}
+
 <section class="content-grid detail-grid">
   <div class="list-column">
     <section class="panel">
-      <h2>Your venues</h2>
+      <h2>{% if user["role"] == "admin" %}Venue records{% else %}Your venues{% endif %}</h2>
       {% for venue in venues %}
-        <form method="post" action="{{ url_for('nightlife.update_venue', venue_id=venue['id']) }}" class="dashboard-form">
-          <h3>{{ venue["name"] }} <span class="muted">· {{ venue["area_name"] }}</span></h3>
+        <form method="post" action="{{ url_for('nightlife.update_venue', venue_id=venue['id']) }}" class="dashboard-form record-form">
+          <div class="record-head">
+            <div>
+              <h3>{{ venue["name"] }} <span class="muted">- {{ venue["area_name"] }}</span></h3>
+              <p class="record-meta">{{ venue["venue_type"] }} - {{ venue["published_event_count"] }} published event{% if venue["published_event_count"] != 1 %}s{% endif %}</p>
+            </div>
+            <div class="record-badges">
+              <span class="status-badge {% if venue['is_published'] %}status-published{% else %}status-needs-review{% endif %}">{% if venue["is_published"] %}published{% else %}draft{% endif %}</span>
+              {% if venue["social_facebook"] %}
+                <span class="status-badge status-ready">facebook linked</span>
+              {% else %}
+                <span class="status-badge status-no-match">needs facebook</span>
+              {% endif %}
+              {% if venue["event_count"] == 0 %}
+                <span class="status-badge status-no-events">no events</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if user["role"] == "admin" %}
+            <div class="quick-action-row">
+              {% if venue['source_url'] or venue['google_maps_uri'] or venue['social_facebook'] %}
+                <a class="mini-link" href="{{ venue['source_url'] or venue['google_maps_uri'] or venue['social_facebook'] }}" target="_blank" rel="noreferrer">Open source</a>
+              {% else %}
+                <span class="mini-link muted">No source</span>
+              {% endif %}
+              {% if venue["is_published"] %}
+                <button type="submit" formaction="{{ url_for('nightlife.admin_unpublish_venue', venue_id=venue['id']) }}" class="mini-action secondary">Unpublish</button>
+              {% else %}
+                <button type="submit" formaction="{{ url_for('nightlife.admin_publish_venue', venue_id=venue['id']) }}" class="mini-action">Publish</button>
+              {% endif %}
+              <button type="submit" formaction="{{ url_for('nightlife.admin_review_venue', venue_id=venue['id']) }}" class="mini-action secondary">Mark reviewed</button>
+            </div>
+          {% endif %}
           <div class="form-grid">
             <label>Opens<input type="time" name="opens_at" value="{{ venue['opens_at'] }}" required></label>
             <label>Closes<input type="time" name="closes_at" value="{{ venue['closes_at'] }}" required></label>
@@ -127,22 +317,51 @@
             <label>Status<input type="text" name="sync_status" value="{{ venue['sync_status'] }}" required></label>
             <label>Confidence<input type="number" step="0.01" min="0" max="1" name="confidence" value="{{ venue['confidence'] }}" required></label>
             <input type="hidden" name="publish_control" value="1">
+            <input type="hidden" name="queue" value="{{ queue }}">
             <label class="checkbox"><input type="checkbox" name="is_published" {% if venue['is_published'] %}checked{% endif %}>Published</label>
           </div>
           <button type="submit">Save venue</button>
         </form>
       {% else %}
-        <p class="empty-state">No venues are assigned to this account yet.</p>
+        <p class="empty-state">{% if user["role"] == "admin" %}No venue records match this queue.{% else %}No venues are assigned to this account yet.{% endif %}</p>
       {% endfor %}
     </section>
   </div>
 
   <div class="list-column">
     <section class="panel">
-      <h2>Upcoming events</h2>
+      <h2>{% if user["role"] == "admin" %}Event records{% else %}Upcoming events{% endif %}</h2>
       {% for event in events %}
-        <form method="post" action="{{ url_for('nightlife.update_event', event_id=event['id']) }}" class="dashboard-form">
-          <h3>{{ event["title"] }} <span class="muted">· {{ event["venue_name"] }}</span></h3>
+        <form method="post" action="{{ url_for('nightlife.update_event', event_id=event['id']) }}" class="dashboard-form record-form">
+          <div class="record-head">
+            <div>
+              <h3>{{ event["title"] }} <span class="muted">- {{ event["venue_name"] }}</span></h3>
+              <p class="record-meta">{{ event["genre"] }} - {{ event["start_at"]|datetimeformat }}</p>
+            </div>
+            <div class="record-badges">
+              <span class="status-badge {% if event['is_published'] %}status-published{% else %}status-needs-review{% endif %}">{% if event["is_published"] %}published{% else %}draft{% endif %}</span>
+              {% if event["confidence"] < 0.7 %}
+                <span class="status-badge status-needs-review">low confidence</span>
+              {% else %}
+                <span class="status-badge status-ready">confidence {{ "%.0f"|format(event["confidence"] * 100) }}%</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if user["role"] == "admin" %}
+            <div class="quick-action-row">
+              {% if event['source_url'] %}
+                <a class="mini-link" href="{{ event['source_url'] }}" target="_blank" rel="noreferrer">Open source</a>
+              {% else %}
+                <span class="mini-link muted">No source</span>
+              {% endif %}
+              {% if event["is_published"] %}
+                <button type="submit" formaction="{{ url_for('nightlife.admin_unpublish_event', event_id=event['id']) }}" class="mini-action secondary">Unpublish</button>
+              {% else %}
+                <button type="submit" formaction="{{ url_for('nightlife.admin_publish_event', event_id=event['id']) }}" class="mini-action">Publish</button>
+              {% endif %}
+              <button type="submit" formaction="{{ url_for('nightlife.admin_review_event', event_id=event['id']) }}" class="mini-action secondary">Mark reviewed</button>
+            </div>
+          {% endif %}
           <div class="form-grid">
             <label>Title<input type="text" name="title" value="{{ event['title'] }}" required></label>
             <label>Genre<input type="text" name="genre" value="{{ event['genre'] }}" required></label>
@@ -153,12 +372,13 @@
             <label>Source type<input type="text" name="source_type" value="{{ event['source_type'] }}" required></label>
             <label>Source URL<input type="url" name="source_url" value="{{ event['source_url'] or '' }}"></label>
             <label>Status<input type="text" name="sync_status" value="{{ event['sync_status'] }}" required></label>
+            <input type="hidden" name="queue" value="{{ queue }}">
             <label class="checkbox"><input type="checkbox" name="is_published" {% if event['is_published'] %}checked{% endif %}>Published</label>
           </div>
           <button type="submit">Save event</button>
         </form>
       {% else %}
-        <p class="empty-state">No events are available to manage.</p>
+        <p class="empty-state">{% if user["role"] == "admin" %}No event records match this queue.{% else %}No events are available to manage.{% endif %}</p>
       {% endfor %}
     </section>
 
@@ -169,7 +389,7 @@
           <form method="post" action="{{ url_for('nightlife.review_claim', claim_id=claim['id']) }}" class="claim-review">
             <div>
               <strong>{{ claim["venue_name"] }}</strong>
-              <p>{{ claim["claimant_name"] }} · {{ claim["claimant_email"] }}</p>
+              <p>{{ claim["claimant_name"] }} - {{ claim["claimant_email"] }}</p>
               <p>{{ claim["message"] }}</p>
               <small>{{ claim["created_at"]|datetimeformat("%d %b %Y %H:%M") }}</small>
             </div>
