@@ -8,7 +8,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask import current_app
 
 from app.ai_event_cleaner import ai_cleanup_enabled, clean_event_with_ai
-from app.apify_facebook import extract_events_from_posts, run_facebook_posts_scraper
+from app.apify_facebook import FacebookPostEvent, extract_events_from_posts, run_facebook_posts_scraper
 from app.facebook_page_discovery import best_confident_candidate, discover_facebook_page_candidates
 from app.google_places import GooglePlacesClient, ensure_google_place_columns, load_env_file
 
@@ -30,6 +30,10 @@ def current_user():
 
 def dashboard_report():
     return session.pop("dashboard_report", None)
+
+
+def dashboard_event_candidates():
+    return session.get("event_candidates", [])
 
 
 def dashboard_admin_summary():
@@ -190,8 +194,25 @@ def queue_label(queue):
 def dashboard_redirect():
     queue = request.form.get("queue", "").strip()
     if queue:
-        return redirect(url_for("nightlife.dashboard", queue=queue))
-    return redirect(url_for("nightlife.dashboard"))
+        return redirect(f"{url_for('nightlife.dashboard', queue=queue)}#review-queue")
+    return redirect(f"{url_for('nightlife.dashboard')}#review-queue")
+
+
+def dashboard_queue_redirect(queue):
+    allowed = {"all", "needs-facebook", "draft-pubs", "draft-events", "low-confidence", "published"}
+    safe_queue = queue if queue in allowed else "all"
+    return redirect(f"{url_for('nightlife.dashboard', queue=safe_queue)}#review-queue")
+
+
+def selected_int_ids(name):
+    ids = []
+    for value in request.form.getlist(name):
+        try:
+            parsed = int(value)
+        except ValueError:
+            abort(400)
+        ids.append(parsed)
+    return ids
 
 
 def request_action():
@@ -228,6 +249,38 @@ def parse_float_form(name, default):
         return float(value)
     except ValueError:
         abort(400)
+
+
+def parse_optional_float(value):
+    stripped = (value or "").strip()
+    if not stripped:
+        return None
+    try:
+        return float(stripped)
+    except ValueError:
+        return None
+
+
+def parse_bulk_lines(text):
+    lines = []
+    for line_number, line in enumerate((text or "").splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = [part.strip() for part in stripped.split("|")]
+        lines.append((line_number, parts))
+    return lines
+
+
+def unique_slug_for(db, table, base_slug, existing_id=None):
+    slug = base_slug
+    counter = 2
+    while True:
+        row = db.execute(f"SELECT id FROM {table} WHERE slug = ?", (slug,)).fetchone()
+        if row is None or (existing_id and row["id"] == existing_id):
+            return slug
+        slug = f"{base_slug}-{counter}"
+        counter += 1
 
 
 def env_value(name):
@@ -722,7 +775,15 @@ def dashboard():
             """
         ).fetchall()
         areas = db.execute("SELECT * FROM areas ORDER BY name").fetchall()
-        claims = db.execute("SELECT vc.*, v.name AS venue_name FROM venue_claims vc JOIN venues v ON v.id = vc.venue_id ORDER BY vc.created_at DESC").fetchall()
+        claims = db.execute(
+            """
+            SELECT vc.*, v.name AS venue_name
+            FROM venue_claims vc
+            JOIN venues v ON v.id = vc.venue_id
+            WHERE vc.status = 'pending'
+            ORDER BY vc.created_at DESC
+            """
+        ).fetchall()
         admin_summary = dashboard_admin_summary()
         queue_counts = dashboard_queue_counts()
     else:
@@ -779,6 +840,7 @@ def dashboard():
         claims=claims,
         areas=areas,
         admin_report=dashboard_report(),
+        event_candidates=dashboard_event_candidates(),
         admin_summary=admin_summary,
         queue=queue,
         queue_label=queue_label(queue),
@@ -1012,6 +1074,351 @@ def admin_update_venue_profile_link():
     return redirect(url_for("nightlife.dashboard"))
 
 
+@bp.post("/dashboard/admin-tools/bulk-venues")
+@login_required(role="admin")
+def admin_bulk_venues():
+    values = require_non_empty_form("area", "venue_rows")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    publish = request.form.get("publish") == "on"
+    db = get_db()
+    area = db.execute("SELECT * FROM areas WHERE slug = ?", (values["area"],)).fetchone()
+    if area is None:
+        flash("Selected area was not found.", "error")
+        return redirect(url_for("nightlife.dashboard"))
+
+    rows = []
+    saved = 0
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    for line_number, parts in parse_bulk_lines(values["venue_rows"]):
+        if len(parts) < 4:
+            rows.append(venue_report_row("error", f"Line {line_number}", "Use: name | address | latitude | longitude | type | opens | closes | facebook"))
+            continue
+        name, address, latitude_text, longitude_text = parts[:4]
+        venue_type = parts[4] if len(parts) > 4 and parts[4] else "Pub"
+        opens_at = parts[5] if len(parts) > 5 and parts[5] else "TBC"
+        closes_at = parts[6] if len(parts) > 6 and parts[6] else "TBC"
+        facebook_url = parts[7] if len(parts) > 7 else ""
+        latitude = parse_optional_float(latitude_text)
+        longitude = parse_optional_float(longitude_text)
+        if not name or not address or latitude is None or longitude is None:
+            rows.append(venue_report_row("error", f"Line {line_number}", "Name, address, latitude, and longitude are required."))
+            continue
+        base_slug = slugify(name)
+        existing = db.execute("SELECT id FROM venues WHERE slug = ?", (base_slug,)).fetchone()
+        venue_id = existing["id"] if existing else None
+        if action == "apply":
+            if existing:
+                db.execute(
+                    """
+                    UPDATE venues
+                    SET area_id = ?, name = ?, venue_type = ?, address = ?, latitude = ?, longitude = ?,
+                        opens_at = ?, closes_at = ?, social_facebook = COALESCE(NULLIF(?, ''), social_facebook),
+                        is_published = ?, source_type = ?, sync_status = ?, confidence = ?, last_verified_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        area["id"],
+                        name,
+                        venue_type,
+                        address,
+                        latitude,
+                        longitude,
+                        opens_at,
+                        closes_at,
+                        facebook_url,
+                        1 if publish else 0,
+                        "admin-bulk",
+                        "admin-reviewed" if publish else "needs-review",
+                        0.72,
+                        now,
+                        venue_id,
+                    ),
+                )
+            else:
+                venue_slug = unique_slug_for(db, "venues", base_slug)
+                venue_id = db.execute(
+                    """
+                    INSERT INTO venues
+                    (
+                        area_id, name, slug, venue_type, address, description, price_band, latitude, longitude,
+                        opens_at, closes_at, social_facebook, social_instagram, social_website,
+                        is_published, source_type, source_url, sync_status, confidence, last_verified_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, 'TBC', ?, ?, ?, ?, ?, NULL, NULL, ?, 'admin-bulk', NULL, ?, 0.72, ?)
+                    """,
+                    (
+                        area["id"],
+                        name,
+                        venue_slug,
+                        venue_type,
+                        address,
+                        f"Bulk added admin venue for {area['name']}. Details need review.",
+                        latitude,
+                        longitude,
+                        opens_at,
+                        closes_at,
+                        facebook_url,
+                        1 if publish else 0,
+                        "admin-reviewed" if publish else "needs-review",
+                        now,
+                    ),
+                ).lastrowid
+            saved += 1
+        rows.append(
+            venue_report_row(
+                "saved" if action == "apply" else "ready",
+                name,
+                f"{venue_type} | {address} | {latitude}, {longitude}",
+                facebook_url or None,
+                venue_id,
+            )
+        )
+
+    if action == "apply":
+        db.commit()
+        flash(f"Bulk venue import saved {saved} venue record(s).", "success")
+    else:
+        flash(f"Previewed {len(rows)} bulk venue row(s). Nothing was saved yet.", "success")
+    set_dashboard_report("Bulk venue import", rows, "Preview rows carefully before saving.")
+    return redirect(f"{url_for('nightlife.dashboard', queue='draft-pubs')}#review-queue")
+
+
+@bp.post("/dashboard/admin-tools/bulk-events")
+@login_required(role="admin")
+def admin_bulk_events():
+    values = require_non_empty_form("event_rows")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    publish = request.form.get("publish") == "on"
+    db = get_db()
+    rows = []
+    saved = 0
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    for line_number, parts in parse_bulk_lines(values["event_rows"]):
+        if len(parts) < 6:
+            rows.append(event_report_row("error", f"Line {line_number}", "Use: venue slug | title | start | end | genre | description | price | source url"))
+            continue
+        venue_slug, title, start_at, end_at, genre, description = parts[:6]
+        price_label = parts[6] if len(parts) > 6 and parts[6] else "TBC"
+        source_url = parts[7] if len(parts) > 7 else ""
+        venue = db.execute("SELECT id, name, is_published FROM venues WHERE slug = ?", (venue_slug,)).fetchone()
+        if venue is None:
+            rows.append(event_report_row("error", title or f"Line {line_number}", f"Venue slug not found: {venue_slug}", source_url or None))
+            continue
+        if not title or not start_at or not end_at or not genre or not description:
+            rows.append(event_report_row("error", f"Line {line_number}", "Title, start, end, genre, and description are required.", source_url or None))
+            continue
+        price_amount = None
+        if price_label.lower().startswith(("€", "eur")):
+            price_amount = parse_optional_float(price_label.lower().replace("eur", "").replace("€", ""))
+        event_id = None
+        if action == "apply":
+            existing = db.execute(
+                "SELECT id FROM events WHERE venue_id = ? AND LOWER(title) = LOWER(?) AND start_at = ?",
+                (venue["id"], title, start_at),
+            ).fetchone()
+            if existing:
+                event_id = existing["id"]
+                db.execute(
+                    """
+                    UPDATE events
+                    SET description = ?, genre = ?, end_at = ?, price_label = ?, price_amount = ?,
+                        is_published = ?, source_type = ?, source_url = ?, sync_status = ?, confidence = ?, last_verified_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        description,
+                        genre,
+                        end_at,
+                        price_label,
+                        price_amount,
+                        1 if publish else 0,
+                        "admin-bulk",
+                        source_url,
+                        "admin-reviewed" if publish else "needs-review",
+                        0.76,
+                        now,
+                        event_id,
+                    ),
+                )
+            else:
+                event_id = db.execute(
+                    """
+                    INSERT INTO events
+                    (
+                        venue_id, title, description, genre, start_at, end_at, price_label, price_amount,
+                        image_url, currency, is_published, source_type, source_url, sync_status, confidence, last_verified_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'EUR', ?, 'admin-bulk', ?, ?, 0.76, ?)
+                    """,
+                    (
+                        venue["id"],
+                        title,
+                        description,
+                        genre,
+                        start_at,
+                        end_at,
+                        price_label,
+                        price_amount,
+                        1 if publish else 0,
+                        source_url,
+                        "admin-reviewed" if publish else "needs-review",
+                        now,
+                    ),
+                ).lastrowid
+            saved += 1
+        rows.append(
+            event_report_row(
+                "saved" if action == "apply" else "ready",
+                f"{title} | {venue['name']}",
+                f"{start_at} | {genre} | {price_label}",
+                source_url or None,
+                event_id,
+            )
+        )
+
+    if action == "apply":
+        db.commit()
+        flash(f"Bulk event import saved {saved} event record(s).", "success")
+    else:
+        flash(f"Previewed {len(rows)} bulk event row(s). Nothing was saved yet.", "success")
+    set_dashboard_report("Bulk event import", rows, "Preview rows carefully before saving.")
+    return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#review-queue")
+
+
+@bp.post("/dashboard/admin-tools/delete-old-events")
+@login_required(role="admin")
+def admin_delete_old_events():
+    values = require_non_empty_form("before_date")
+    if values is None:
+        return redirect(url_for("nightlife.dashboard"))
+    action = request_action()
+    before_date = values["before_date"]
+    scope = request.form.get("scope", "all").strip()
+    if scope not in {"all", "drafts", "published"}:
+        abort(400)
+    where = ["date(e.start_at) < date(?)"]
+    params = [before_date]
+    if scope == "drafts":
+        where.append("e.is_published = 0")
+    elif scope == "published":
+        where.append("e.is_published = 1")
+    where_sql = " AND ".join(where)
+    db = get_db()
+    matches = db.execute(
+        f"""
+        SELECT e.id, e.title, e.start_at, e.source_url, v.name AS venue_name
+        FROM events e
+        JOIN venues v ON v.id = e.venue_id
+        WHERE {where_sql}
+        ORDER BY e.start_at ASC
+        LIMIT 80
+        """,
+        params,
+    ).fetchall()
+    total = db.execute(f"SELECT COUNT(*) AS count FROM events e WHERE {where_sql}", params).fetchone()["count"]
+    if action == "apply" and request.form.get("confirm_delete") != "on":
+        flash("Tick the confirmation checkbox before deleting old events.", "error")
+        action = "preview"
+    rows = [
+        event_report_row(
+            "ready" if action == "preview" else "saved",
+            f"{event['title']} | {event['venue_name']}",
+            f"Starts {event['start_at']}",
+            event["source_url"],
+            event["id"],
+        )
+        for event in matches
+    ]
+    if action == "apply":
+        db.execute(f"DELETE FROM events WHERE id IN (SELECT e.id FROM events e WHERE {where_sql})", params)
+        db.commit()
+        flash(f"Deleted {total} old event record(s).", "success")
+        rows = [event_report_row("saved", "Old events deleted", f"Deleted {total} event(s) before {before_date}.")]
+    else:
+        flash(f"Previewed {min(total, 80)} of {total} old event(s). Nothing was deleted yet.", "success")
+    set_dashboard_report("Old event cleanup", rows, f"Scope: {scope}. Cutoff date: {before_date}.")
+    return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#review-queue")
+
+
+@bp.post("/dashboard/admin-tools/bulk-venue-action")
+@login_required(role="admin")
+def admin_bulk_venue_action():
+    venue_ids = selected_int_ids("venue_ids")
+    action = request.form.get("bulk_action", "").strip()
+    if action not in {"publish", "unpublish", "review"}:
+        abort(400)
+    if not venue_ids:
+        flash("Select at least one pub before applying a bulk action.", "error")
+        return dashboard_redirect()
+
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    placeholders = ",".join("?" for _ in venue_ids)
+    if action == "publish":
+        sql = f"UPDATE venues SET is_published = 1, sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})"
+        params = ["admin-approved", now, *venue_ids]
+        message = "Published"
+    elif action == "unpublish":
+        sql = f"UPDATE venues SET is_published = 0, sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})"
+        params = ["admin-unpublished", now, *venue_ids]
+        message = "Unpublished"
+    else:
+        sql = f"UPDATE venues SET sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})"
+        params = ["admin-reviewed", now, *venue_ids]
+        message = "Marked reviewed"
+
+    db = get_db()
+    db.execute(sql, params)
+    db.commit()
+    flash(f"{message} {len(venue_ids)} selected pub record(s).", "success")
+    if action == "publish":
+        return dashboard_queue_redirect("published")
+    if action == "unpublish":
+        return dashboard_queue_redirect("draft-pubs")
+    return dashboard_redirect()
+
+
+@bp.post("/dashboard/admin-tools/bulk-event-action")
+@login_required(role="admin")
+def admin_bulk_event_action():
+    event_ids = selected_int_ids("event_ids")
+    action = request.form.get("bulk_action", "").strip()
+    if action not in {"publish", "unpublish", "review", "delete"}:
+        abort(400)
+    if not event_ids:
+        flash("Select at least one event before applying a bulk action.", "error")
+        return dashboard_redirect()
+    if action == "delete" and request.form.get("confirm_delete") != "on":
+        flash("Tick the confirmation checkbox before deleting selected events.", "error")
+        return dashboard_redirect()
+
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    placeholders = ",".join("?" for _ in event_ids)
+    db = get_db()
+    if action == "publish":
+        db.execute(f"UPDATE events SET is_published = 1, sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})", ["admin-approved", now, *event_ids])
+        message = "Published"
+    elif action == "unpublish":
+        db.execute(f"UPDATE events SET is_published = 0, sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})", ["admin-unpublished", now, *event_ids])
+        message = "Unpublished"
+    elif action == "review":
+        db.execute(f"UPDATE events SET sync_status = ?, last_verified_at = ? WHERE id IN ({placeholders})", ["admin-reviewed", now, *event_ids])
+        message = "Marked reviewed"
+    else:
+        db.execute(f"DELETE FROM events WHERE id IN ({placeholders})", event_ids)
+        message = "Deleted"
+    db.commit()
+    flash(f"{message} {len(event_ids)} selected event record(s).", "success")
+    if action == "publish":
+        return dashboard_queue_redirect("published")
+    if action in {"unpublish", "delete"}:
+        return dashboard_queue_redirect("draft-events")
+    return dashboard_redirect()
+
+
 @bp.post("/dashboard/admin-tools/apify-events")
 @login_required(role="admin")
 def admin_apify_event_sync():
@@ -1041,6 +1448,7 @@ def admin_apify_event_sync():
         return redirect(url_for("nightlife.dashboard"))
 
     rows = []
+    candidates = []
     imported = 0
     for venue in venues:
         try:
@@ -1079,18 +1487,84 @@ def admin_apify_event_sync():
                         event_id,
                     )
                 )
+                if action == "preview":
+                    candidate_id = f"{venue['id']}-{len(candidates)}"
+                    candidates.append(
+                        {
+                            "id": candidate_id,
+                            "venue": {"id": venue["id"], "name": venue["name"], "slug": venue["slug"]},
+                            "event": event.to_dict(),
+                        }
+                    )
             if not events:
                 rows.append(venue_report_row("no-events", venue["name"], f"Checked {len(posts)} post(s); no event detected.", venue["social_facebook"], venue["id"]))
         except (requests.RequestException, ValueError) as exc:
             rows.append(venue_report_row("error", venue["name"], str(exc), venue["social_facebook"], venue["id"]))
 
     if action == "apply":
+        session.pop("event_candidates", None)
         get_db().commit()
         flash(f"Event sync saved {imported} new event(s). Existing matching events may have been updated.", "success")
     else:
+        session["event_candidates"] = candidates
         flash("Event sync preview complete. Nothing was saved yet.", "success")
     set_dashboard_report("Apify event sync", rows, f"Checked {len(venues)} venue page(s).")
+    if action == "preview" and candidates:
+        return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#event-candidates")
     return redirect(url_for("nightlife.dashboard"))
+
+
+@bp.post("/dashboard/admin-tools/event-candidates")
+@login_required(role="admin")
+def admin_save_event_candidates():
+    candidate_ids = set(request.form.getlist("candidate_id"))
+    publish = request.form.get("publish") == "on"
+    candidates = dashboard_event_candidates()
+    if not candidate_ids:
+        flash("Select at least one event candidate to save.", "error")
+        return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#event-candidates")
+
+    rows = []
+    saved = 0
+    remaining = []
+    for candidate in candidates:
+        event_data = candidate.get("event") or {}
+        venue = candidate.get("venue") or {}
+        candidate_id = candidate.get("id")
+        if candidate_id not in candidate_ids:
+            remaining.append(candidate)
+            continue
+        venue_id = venue.get("id")
+        if not venue_id:
+            rows.append(event_report_row("error", event_data.get("title", "Unknown event"), "Missing venue ID", event_data.get("source_url")))
+            continue
+        event = FacebookPostEvent(**event_data)
+        if upsert_event(int(venue_id), event, publish=publish):
+            saved += 1
+        event_id = event_id_for_sync(int(venue_id), event)
+        rows.append(
+            event_report_row(
+                "published" if publish else "saved",
+                f"{event.title} | {venue.get('name', 'Unknown venue')}",
+                f"{event.start_at} | {event.genre} | confidence {event.confidence:.2f}",
+                event.source_url,
+                event_id,
+            )
+        )
+
+    get_db().commit()
+    session["event_candidates"] = remaining
+    flash(f"Saved {len(candidate_ids)} selected event candidate(s). {saved} were new; matching events may have been updated.", "success")
+    set_dashboard_report("Selected event candidates saved", rows, "Only checked candidates were saved.")
+    return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#event-candidates")
+
+
+@bp.post("/dashboard/admin-tools/event-candidates/clear")
+@login_required(role="admin")
+def admin_clear_event_candidates():
+    session.pop("event_candidates", None)
+    flash("Cleared the event candidate preview inbox.", "success")
+    return redirect(f"{url_for('nightlife.dashboard', queue='draft-events')}#review-queue")
 
 
 @bp.post("/dashboard/admin-tools/publish-venue/<int:venue_id>")
@@ -1209,10 +1683,19 @@ def review_claim(claim_id):
     if status not in {"approved", "rejected", "pending"}:
         abort(400)
     db = get_db()
-    claim = db.execute("SELECT id FROM venue_claims WHERE id = ?", (claim_id,)).fetchone()
+    claim = db.execute(
+        """
+        SELECT vc.id, vc.status, v.name AS venue_name
+        FROM venue_claims vc
+        JOIN venues v ON v.id = vc.venue_id
+        WHERE vc.id = ?
+        """,
+        (claim_id,),
+    ).fetchone()
     if claim is None:
         abort(404)
     db.execute("UPDATE venue_claims SET status = ? WHERE id = ?", (status, claim_id))
     db.commit()
-    flash(f"Claim marked as {status}.", "success")
-    return redirect(url_for("nightlife.dashboard"))
+    action_label = "approved" if status == "approved" else "rejected" if status == "rejected" else "marked as pending"
+    flash(f"Claim for {claim['venue_name']} {action_label}.", "success")
+    return redirect(f"{url_for('nightlife.dashboard')}#venue-claims")

@@ -93,6 +93,69 @@
     </div>
   {% endif %}
 
+  {% if event_candidates %}
+    <section id="event-candidates" class="event-candidate-panel">
+      <div class="candidate-header">
+        <div>
+          <p class="eyebrow">Event candidate inbox</p>
+          <h3>Review Apify preview results before saving</h3>
+          <p class="muted">Choose only the events that look accurate. Unchecked candidates stay in this inbox.</p>
+        </div>
+        <form method="post" action="{{ url_for('nightlife.admin_clear_event_candidates') }}">
+          <button type="submit" class="secondary">Clear inbox</button>
+        </form>
+      </div>
+
+      <form method="post" action="{{ url_for('nightlife.admin_save_event_candidates') }}" class="candidate-review-form">
+        <div class="candidate-grid">
+          {% for candidate in event_candidates %}
+            {% set item = candidate["event"] %}
+            {% set venue = candidate["venue"] %}
+            <article class="candidate-card">
+              <label class="candidate-check">
+                <input type="checkbox" name="candidate_id" value="{{ candidate['id'] }}" checked>
+                <span>Save this event</span>
+              </label>
+              {% if item["image_url"] %}
+                <img class="candidate-image" src="{{ item['image_url'] }}" alt="Event poster for {{ item['title'] }}" loading="lazy">
+              {% endif %}
+              <div class="candidate-body">
+                <div class="record-badges">
+                  <span class="status-badge status-ready">{{ item["genre"] }}</span>
+                  {% if item["confidence"] < 0.7 %}
+                    <span class="status-badge status-needs-review">low confidence {{ "%.0f"|format(item["confidence"] * 100) }}%</span>
+                  {% else %}
+                    <span class="status-badge status-ready">confidence {{ "%.0f"|format(item["confidence"] * 100) }}%</span>
+                  {% endif %}
+                </div>
+                <h4>{{ item["title"] }}</h4>
+                <p class="candidate-meta">{{ venue["name"] }} - {{ item["start_at"]|datetimeformat }} - {{ item["price_label"] }}</p>
+                <p>{{ item["description"] }}</p>
+                <div class="candidate-actions">
+                  {% if item["source_url"] %}<a class="mini-link" href="{{ item['source_url'] }}" target="_blank" rel="noreferrer">Open Facebook post</a>{% endif %}
+                  {% if item["image_url"] %}<a class="mini-link" href="{{ item['image_url'] }}" target="_blank" rel="noreferrer">Open image</a>{% endif %}
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+        <div class="candidate-save-bar">
+          <label class="checkbox"><input type="checkbox" name="publish">Publish selected immediately</label>
+          <button type="submit">Save selected candidates</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+
+  <details class="admin-tools-disclosure">
+    <summary>
+      <span>
+        <strong>Data tools</strong>
+        <small>Import pubs, find Facebook pages, collect events, and manage bulk paste tools.</small>
+      </span>
+      <span class="summary-action">tools</span>
+    </summary>
+
   <div class="area-health-panel">
     <div>
       <p class="eyebrow">Data quality by area</p>
@@ -247,35 +310,96 @@
         <button type="submit" name="action" value="apply" class="secondary">Save events</button>
       </div>
     </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_bulk_venues') }}" class="dashboard-form admin-tool-card wide-admin-tool">
+      <h3>5. Bulk add pubs</h3>
+      <p class="muted">One pub per line. Format: <code>name | address | latitude | longitude | type | opens | closes | facebook</code></p>
+      <div class="form-grid">
+        <label>Area<select name="area" required>
+          {% for area in areas %}
+            <option value="{{ area['slug'] }}">{{ area["name"] }}</option>
+          {% endfor %}
+        </select></label>
+        <label class="checkbox"><input type="checkbox" name="publish">Publish added pubs immediately</label>
+      </div>
+      <label>Pub rows<textarea name="venue_rows" rows="6" placeholder="Example Pub | Main Street, Ballina | 54.114 | -9.155 | Pub | 12:00 | 23:30 | https://www.facebook.com/example" required></textarea></label>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview pubs</button>
+        <button type="submit" name="action" value="apply" class="secondary">Save pubs</button>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_bulk_events') }}" class="dashboard-form admin-tool-card wide-admin-tool">
+      <h3>6. Bulk add events</h3>
+      <p class="muted">One event per line. Format: <code>venue slug | title | start | end | genre | description | price | source url</code></p>
+      <label>Event rows<textarea name="event_rows" rows="6" placeholder="bar-square-ballina | Quiz Night | 2026-06-20T20:00 | 2026-06-20T23:00 | Quiz | Weekly quiz night | TBC | https://www.facebook.com/example" required></textarea></label>
+      <label class="checkbox"><input type="checkbox" name="publish">Publish added events immediately</label>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview events</button>
+        <button type="submit" name="action" value="apply" class="secondary">Save events</button>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('nightlife.admin_delete_old_events') }}" class="dashboard-form admin-tool-card danger-admin-tool">
+      <h3>7. Delete old events</h3>
+      <p class="muted">Preview first, then apply only when you are sure. This permanently removes matching event records.</p>
+      <div class="form-grid">
+        <label>Delete events before<input type="date" name="before_date" required></label>
+        <label>Scope<select name="scope">
+          <option value="all">All old events</option>
+          <option value="drafts">Draft old events only</option>
+          <option value="published">Published old events only</option>
+        </select></label>
+        <label class="checkbox"><input type="checkbox" name="confirm_delete">I understand this deletes matching events</label>
+      </div>
+      <div class="inline-actions">
+        <button type="submit" name="action" value="preview">Preview delete</button>
+        <button type="submit" name="action" value="apply" class="secondary">Delete old events</button>
+      </div>
+    </form>
   </div>
+  </details>
 </section>
 {% endif %}
 
 {% if user["role"] == "admin" %}
-<section class="queue-toolbar" aria-label="Dashboard review filters">
+<section id="review-queue" class="queue-toolbar" aria-label="Dashboard review filters">
   <div>
     <p class="eyebrow">Review queue</p>
     <h2>{{ queue_label }}</h2>
   </div>
   <nav class="queue-tabs" aria-label="Admin dashboard queues">
-    <a class="{% if queue == 'all' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='all') }}">All <span>{{ queue_counts["all_count"] }}</span></a>
-    <a class="{% if queue == 'needs-facebook' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='needs-facebook') }}">Needs Facebook <span>{{ queue_counts["needs_facebook_count"] }}</span></a>
-    <a class="{% if queue == 'draft-pubs' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-pubs') }}">Draft pubs <span>{{ queue_counts["draft_pubs_count"] }}</span></a>
-    <a class="{% if queue == 'draft-events' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-events') }}">Draft events <span>{{ queue_counts["draft_events_count"] }}</span></a>
-    <a class="{% if queue == 'low-confidence' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='low-confidence') }}">Low confidence <span>{{ queue_counts["low_confidence_count"] }}</span></a>
-    <a class="{% if queue == 'published' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='published') }}">Published <span>{{ queue_counts["published_count"] }}</span></a>
+    <a class="{% if queue == 'all' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='all') }}#review-queue">All <span>{{ queue_counts["all_count"] }}</span></a>
+    <a class="{% if queue == 'needs-facebook' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='needs-facebook') }}#review-queue">Needs Facebook <span>{{ queue_counts["needs_facebook_count"] }}</span></a>
+    <a class="{% if queue == 'draft-pubs' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-pubs') }}#review-queue">Draft pubs <span>{{ queue_counts["draft_pubs_count"] }}</span></a>
+    <a class="{% if queue == 'draft-events' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='draft-events') }}#review-queue">Draft events <span>{{ queue_counts["draft_events_count"] }}</span></a>
+    <a class="{% if queue == 'low-confidence' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='low-confidence') }}#review-queue">Low confidence <span>{{ queue_counts["low_confidence_count"] }}</span></a>
+    <a class="{% if queue == 'published' %}active{% endif %}" href="{{ url_for('nightlife.dashboard', queue='published') }}#review-queue">Published <span>{{ queue_counts["published_count"] }}</span></a>
   </nav>
 </section>
 {% endif %}
 
 <section class="content-grid detail-grid">
   <div class="list-column">
-    <section class="panel">
+    <section class="panel records-panel">
       <h2>{% if user["role"] == "admin" %}Venue records{% else %}Your venues{% endif %}</h2>
+      {% if user["role"] == "admin" and venues %}
+        <form method="post" action="{{ url_for('nightlife.admin_bulk_venue_action') }}" class="bulk-select-bar" id="bulk-venue-form">
+          <input type="hidden" name="queue" value="{{ queue }}">
+          <strong>Selected pubs</strong>
+          <button type="submit" name="bulk_action" value="publish" class="mini-action">Publish selected</button>
+          <button type="submit" name="bulk_action" value="unpublish" class="mini-action secondary">Unpublish selected</button>
+          <button type="submit" name="bulk_action" value="review" class="mini-action secondary">Mark reviewed</button>
+          <label class="checkbox bulk-toggle"><input type="checkbox" data-select-all="venue">Select all visible pubs</label>
+        </form>
+      {% endif %}
       {% for venue in venues %}
         <form method="post" action="{{ url_for('nightlife.update_venue', venue_id=venue['id']) }}" class="dashboard-form record-form">
           <div class="record-head">
             <div>
+              {% if user["role"] == "admin" %}
+                <label class="record-select"><input type="checkbox" name="venue_ids" value="{{ venue['id'] }}" form="bulk-venue-form" data-select-kind="venue">Select pub</label>
+              {% endif %}
               <h3>{{ venue["name"] }} <span class="muted">- {{ venue["area_name"] }}</span></h3>
               <p class="record-meta">{{ venue["venue_type"] }} - {{ venue["published_event_count"] }} published event{% if venue["published_event_count"] != 1 %}s{% endif %}</p>
             </div>
@@ -306,21 +430,24 @@
               <button type="submit" formaction="{{ url_for('nightlife.admin_review_venue', venue_id=venue['id']) }}" class="mini-action secondary">Mark reviewed</button>
             </div>
           {% endif %}
-          <div class="form-grid">
-            <label>Opens<input type="time" name="opens_at" value="{{ venue['opens_at'] }}" required></label>
-            <label>Closes<input type="time" name="closes_at" value="{{ venue['closes_at'] }}" required></label>
-            <label>Price band<input type="text" name="price_band" value="{{ venue['price_band'] }}" required></label>
-            <label>Facebook<input type="url" name="social_facebook" value="{{ venue['social_facebook'] or '' }}"></label>
-            <label>Website<input type="url" name="social_website" value="{{ venue['social_website'] or '' }}"></label>
-            <label>Source type<input type="text" name="source_type" value="{{ venue['source_type'] }}" required></label>
-            <label>Source URL<input type="url" name="source_url" value="{{ venue['source_url'] or '' }}"></label>
-            <label>Status<input type="text" name="sync_status" value="{{ venue['sync_status'] }}" required></label>
-            <label>Confidence<input type="number" step="0.01" min="0" max="1" name="confidence" value="{{ venue['confidence'] }}" required></label>
-            <input type="hidden" name="publish_control" value="1">
-            <input type="hidden" name="queue" value="{{ queue }}">
-            <label class="checkbox"><input type="checkbox" name="is_published" {% if venue['is_published'] %}checked{% endif %}>Published</label>
-          </div>
-          <button type="submit">Save venue</button>
+          <input type="hidden" name="publish_control" value="1">
+          <input type="hidden" name="queue" value="{{ queue }}">
+          <details class="record-edit-details">
+            <summary>Edit details</summary>
+            <div class="form-grid">
+              <label>Opens<input type="time" name="opens_at" value="{{ venue['opens_at'] }}" required></label>
+              <label>Closes<input type="time" name="closes_at" value="{{ venue['closes_at'] }}" required></label>
+              <label>Price band<input type="text" name="price_band" value="{{ venue['price_band'] }}" required></label>
+              <label>Facebook<input type="url" name="social_facebook" value="{{ venue['social_facebook'] or '' }}"></label>
+              <label>Website<input type="url" name="social_website" value="{{ venue['social_website'] or '' }}"></label>
+              <label>Source type<input type="text" name="source_type" value="{{ venue['source_type'] }}" required></label>
+              <label>Source URL<input type="url" name="source_url" value="{{ venue['source_url'] or '' }}"></label>
+              <label>Status<input type="text" name="sync_status" value="{{ venue['sync_status'] }}" required></label>
+              <label>Confidence<input type="number" step="0.01" min="0" max="1" name="confidence" value="{{ venue['confidence'] }}" required></label>
+              <label class="checkbox"><input type="checkbox" name="is_published" {% if venue['is_published'] %}checked{% endif %}>Published</label>
+            </div>
+            <button type="submit">Save venue</button>
+          </details>
         </form>
       {% else %}
         <p class="empty-state">{% if user["role"] == "admin" %}No venue records match this queue.{% else %}No venues are assigned to this account yet.{% endif %}</p>
@@ -329,12 +456,27 @@
   </div>
 
   <div class="list-column">
-    <section class="panel">
+    <section class="panel records-panel">
       <h2>{% if user["role"] == "admin" %}Event records{% else %}Upcoming events{% endif %}</h2>
+      {% if user["role"] == "admin" and events %}
+        <form method="post" action="{{ url_for('nightlife.admin_bulk_event_action') }}" class="bulk-select-bar" id="bulk-event-form">
+          <input type="hidden" name="queue" value="{{ queue }}">
+          <strong>Selected events</strong>
+          <button type="submit" name="bulk_action" value="publish" class="mini-action">Publish selected</button>
+          <button type="submit" name="bulk_action" value="unpublish" class="mini-action secondary">Unpublish selected</button>
+          <button type="submit" name="bulk_action" value="review" class="mini-action secondary">Mark reviewed</button>
+          <label class="checkbox"><input type="checkbox" name="confirm_delete">Confirm delete</label>
+          <button type="submit" name="bulk_action" value="delete" class="mini-action secondary">Delete selected</button>
+          <label class="checkbox bulk-toggle"><input type="checkbox" data-select-all="event">Select all visible events</label>
+        </form>
+      {% endif %}
       {% for event in events %}
         <form method="post" action="{{ url_for('nightlife.update_event', event_id=event['id']) }}" class="dashboard-form record-form">
           <div class="record-head">
             <div>
+              {% if user["role"] == "admin" %}
+                <label class="record-select"><input type="checkbox" name="event_ids" value="{{ event['id'] }}" form="bulk-event-form" data-select-kind="event">Select event</label>
+              {% endif %}
               <h3>{{ event["title"] }} <span class="muted">- {{ event["venue_name"] }}</span></h3>
               <p class="record-meta">{{ event["genre"] }} - {{ event["start_at"]|datetimeformat }}</p>
             </div>
@@ -362,20 +504,23 @@
               <button type="submit" formaction="{{ url_for('nightlife.admin_review_event', event_id=event['id']) }}" class="mini-action secondary">Mark reviewed</button>
             </div>
           {% endif %}
-          <div class="form-grid">
-            <label>Title<input type="text" name="title" value="{{ event['title'] }}" required></label>
-            <label>Genre<input type="text" name="genre" value="{{ event['genre'] }}" required></label>
-            <label>Starts<input type="datetime-local" name="start_at" value="{{ event['start_at'] }}" required></label>
-            <label>Ends<input type="datetime-local" name="end_at" value="{{ event['end_at'] }}" required></label>
-            <label>Price label<input type="text" name="price_label" value="{{ event['price_label'] }}" required></label>
-            <label>Price amount<input type="number" step="0.01" name="price_amount" value="{{ event['price_amount'] if event['price_amount'] is not none else '' }}"></label>
-            <label>Source type<input type="text" name="source_type" value="{{ event['source_type'] }}" required></label>
-            <label>Source URL<input type="url" name="source_url" value="{{ event['source_url'] or '' }}"></label>
-            <label>Status<input type="text" name="sync_status" value="{{ event['sync_status'] }}" required></label>
-            <input type="hidden" name="queue" value="{{ queue }}">
-            <label class="checkbox"><input type="checkbox" name="is_published" {% if event['is_published'] %}checked{% endif %}>Published</label>
-          </div>
-          <button type="submit">Save event</button>
+          <input type="hidden" name="queue" value="{{ queue }}">
+          <details class="record-edit-details">
+            <summary>Edit details</summary>
+            <div class="form-grid">
+              <label>Title<input type="text" name="title" value="{{ event['title'] }}" required></label>
+              <label>Genre<input type="text" name="genre" value="{{ event['genre'] }}" required></label>
+              <label>Starts<input type="datetime-local" name="start_at" value="{{ event['start_at'] }}" required></label>
+              <label>Ends<input type="datetime-local" name="end_at" value="{{ event['end_at'] }}" required></label>
+              <label>Price label<input type="text" name="price_label" value="{{ event['price_label'] }}" required></label>
+              <label>Price amount<input type="number" step="0.01" name="price_amount" value="{{ event['price_amount'] if event['price_amount'] is not none else '' }}"></label>
+              <label>Source type<input type="text" name="source_type" value="{{ event['source_type'] }}" required></label>
+              <label>Source URL<input type="url" name="source_url" value="{{ event['source_url'] or '' }}"></label>
+              <label>Status<input type="text" name="sync_status" value="{{ event['sync_status'] }}" required></label>
+              <label class="checkbox"><input type="checkbox" name="is_published" {% if event['is_published'] %}checked{% endif %}>Published</label>
+            </div>
+            <button type="submit">Save event</button>
+          </details>
         </form>
       {% else %}
         <p class="empty-state">{% if user["role"] == "admin" %}No event records match this queue.{% else %}No events are available to manage.{% endif %}</p>
@@ -383,7 +528,7 @@
     </section>
 
     {% if user["role"] == "admin" %}
-      <section class="panel">
+      <section class="panel" id="venue-claims">
         <h2>Venue claims</h2>
         {% for claim in claims %}
           <form method="post" action="{{ url_for('nightlife.review_claim', claim_id=claim['id']) }}" class="claim-review">
@@ -405,4 +550,24 @@
     {% endif %}
   </div>
 </section>
+{% if user["role"] == "admin" %}
+<script>
+  window.addEventListener("load", () => {
+    if (window.location.hash !== "#review-queue") return;
+    const scrollToQueue = () => {
+      const queue = document.getElementById("review-queue");
+      if (!queue) return;
+      window.scrollTo({ top: queue.offsetTop - 18, behavior: "auto" });
+    };
+    [60, 240, 700].forEach((delay) => window.setTimeout(scrollToQueue, delay));
+  });
+  document.addEventListener("change", (event) => {
+    const selectAll = event.target?.dataset?.selectAll;
+    if (!selectAll) return;
+    document.querySelectorAll(`[data-select-kind="${selectAll}"]`).forEach((checkbox) => {
+      checkbox.checked = event.target.checked;
+    });
+  });
+</script>
+{% endif %}
 {% endblock %}

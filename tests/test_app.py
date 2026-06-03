@@ -94,7 +94,41 @@ class NightlifeFinderTestCase(unittest.TestCase):
         self.login("admin", "adminpass")
         response = self.client.post("/dashboard/claims/1", data={"status": "approved"}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Claim marked as approved.", response.get_data(as_text=True))
+        self.assertIn("approved.", response.get_data(as_text=True))
+
+    def test_admin_can_reject_claim_and_remove_it_from_pending_list(self):
+        self.login("admin", "adminpass")
+        response = self.client.post("/dashboard/claims/1", data={"status": "rejected"}, follow_redirects=True)
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("rejected.", body)
+        self.assertIn("No claim requests are waiting for review.", body)
+
+    def test_admin_bulk_unpublish_venues_redirects_to_draft_pubs(self):
+        self.login("admin", "adminpass")
+        response = self.client.post(
+            "/dashboard/admin-tools/bulk-venue-action",
+            data={"venue_ids": ["1"], "bulk_action": "unpublish", "queue": "all"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/dashboard?queue=draft-pubs#review-queue")
+        with self.app.app_context():
+            row = get_db().execute("SELECT is_published FROM venues WHERE id = 1").fetchone()
+            self.assertEqual(row["is_published"], 0)
+
+    def test_admin_bulk_unpublish_events_redirects_to_draft_events(self):
+        self.login("admin", "adminpass")
+        response = self.client.post(
+            "/dashboard/admin-tools/bulk-event-action",
+            data={"event_ids": ["1"], "bulk_action": "unpublish", "queue": "all"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/dashboard?queue=draft-events#review-queue")
+        with self.app.app_context():
+            row = get_db().execute("SELECT is_published FROM events WHERE id = 1").fetchone()
+            self.assertEqual(row["is_published"], 0)
 
     @patch("app.views.requests.get")
     def test_route_api_returns_osrm_geometry(self, mock_get):
