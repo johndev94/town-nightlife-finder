@@ -32,6 +32,10 @@ python run.py
 
 ## Expose to the web
 
+For a proper public test deployment, use the Docker/Render setup in [DEPLOYMENT.md](DEPLOYMENT.md). It builds the React frontend, runs Flask through Gunicorn, installs Tesseract for OCR, and stores SQLite data on a Render persistent disk.
+
+The steps below are only for exposing your local development PC directly to the internet.
+
 1. Allow inbound TCP traffic to the app port in Windows Firewall.
 2. Port forward your chosen external port on the router to this PC's LAN IP and the same internal port.
 3. Browse to `http://<your-public-ip>:<forwarded-port>`.

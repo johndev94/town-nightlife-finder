@@ -40,6 +40,10 @@ def create_app(test_config=None):
                 }
         return {"vite_assets": vite_assets}
 
+    @app.get("/health")
+    def health():
+        return {"ok": True}
+
     from .views import bp
 
     app.register_blueprint(bp)
