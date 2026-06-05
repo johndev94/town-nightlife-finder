@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: town-nightlife-finder
+    runtime: docker
+    autoDeploy: true
+    healthCheckPath: /health
+    disk:
+      name: nightlife-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: /data/nightlife.db
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: OSRM_BASE_URL
+        value: https://router.project-osrm.org
+      - key: OPENAI_EVENT_CLEANUP_MODEL
+        value: gpt-4.1-mini
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: APIFY_API_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

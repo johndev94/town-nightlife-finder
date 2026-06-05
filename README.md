@@ -32,6 +32,10 @@ python run.py
 
 ## Expose to the web
 
+For a proper public test deployment, use the Docker/Render setup in [DEPLOYMENT.md](DEPLOYMENT.md). It builds the React frontend, runs Flask through Gunicorn, installs Tesseract for OCR, and stores SQLite data on a Render persistent disk.
+
+The steps below are only for exposing your local development PC directly to the internet.
+
 1. Allow inbound TCP traffic to the app port in Windows Firewall.
 2. Port forward your chosen external port on the router to this PC's LAN IP and the same internal port.
 3. Browse to `http://<your-public-ip>:<forwarded-port>`.
@@ -44,10 +48,9 @@ New-NetFirewallRule -DisplayName "Town Nightlife Finder 5000" -Direction Inbound
 
 Important: this is Flask's built-in development server, so it is fine for testing from the internet but not a hardened production deployment. If you want, I can also set this up behind Waitress or Nginx next.
 
-Demo logins:
+Admin login:
 
-- `admin / adminpass`
-- `velvet_owner / ownerpass`
+- `admin` with the private password configured for this project.
 
 ## Test
 
