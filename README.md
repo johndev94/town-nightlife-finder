@@ -48,10 +48,9 @@ New-NetFirewallRule -DisplayName "Town Nightlife Finder 5000" -Direction Inbound
 
 Important: this is Flask's built-in development server, so it is fine for testing from the internet but not a hardened production deployment. If you want, I can also set this up behind Waitress or Nginx next.
 
-Demo logins:
+Admin login:
 
-- `admin / adminpass`
-- `velvet_owner / ownerpass`
+- `admin` with the private password configured for this project.
 
 ## Test
 

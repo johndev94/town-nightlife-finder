@@ -214,7 +214,8 @@ VENUE_SEED = [
 ]
 
 
-USER_SEED = [("admin", "adminpass", "admin", None), ("velvet_owner", "ownerpass", "owner", "velvet-room")]
+ADMIN_PASSWORD = "sEFellYb%9343"
+USER_SEED = [("admin", ADMIN_PASSWORD, "admin", None)]
 
 SOURCE_SEED = [
     ("venue", "the-lantern-arms", "Website", "manual", "https://lanternarms.example.com/events", "verified", 0.94, "2026-03-30T18:00:00", "Verified by admin"),
@@ -249,12 +250,24 @@ def init_db():
     db.executescript(SCHEMA)
     ensure_schema_upgrades(db)
     seed_if_empty(db)
+    enforce_admin_login_policy(db)
 
 
 def ensure_schema_upgrades(db):
     event_columns = {row["name"] for row in db.execute("PRAGMA table_info(events)").fetchall()}
     if "image_url" not in event_columns:
         db.execute("ALTER TABLE events ADD COLUMN image_url TEXT")
+
+
+def enforce_admin_login_policy(db):
+    db.execute("UPDATE venues SET claimed_by_user_id = NULL WHERE claimed_by_user_id IN (SELECT id FROM users WHERE username != 'admin')")
+    db.execute("DELETE FROM users WHERE username != 'admin'")
+    admin = db.execute("SELECT id FROM users WHERE username = 'admin'").fetchone()
+    if admin:
+        db.execute("UPDATE users SET password = ?, role = 'admin', venue_id = NULL WHERE username = 'admin'", (ADMIN_PASSWORD,))
+    else:
+        db.execute("INSERT INTO users (username, password, role, venue_id) VALUES ('admin', ?, 'admin', NULL)", (ADMIN_PASSWORD,))
+    db.commit()
 
 
 def seed_if_empty(db):
@@ -297,9 +310,6 @@ def seed_if_empty(db):
             "INSERT INTO users (username, password, role, venue_id) VALUES (?, ?, ?, ?)",
             (username, password, role, venue_ids.get(venue_slug)),
         )
-
-    owner_id = db.execute("SELECT id FROM users WHERE username = 'velvet_owner'").fetchone()["id"]
-    db.execute("UPDATE venues SET claimed_by_user_id = ? WHERE slug = 'velvet-room'", (owner_id,))
 
     event_ids = {}
     for venue in VENUE_SEED:
